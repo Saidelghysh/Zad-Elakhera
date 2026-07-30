@@ -19,7 +19,7 @@ jobs:
           channel: 'stable'
 
       - name: توليد مجلدات android/ios الناقصة
-        run: flutter create . --platforms=android
+       run: flutter create . --platforms=android --project-name=zad_alakhira --org=com.zadalakhira --overwrite
 
       - name: تنزيل المكتبات
         run: flutter pub get
