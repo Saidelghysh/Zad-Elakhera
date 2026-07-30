@@ -9,26 +9,20 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: تنزيل الكود
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: تثبيت Flutter
-        uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.24.0'
           channel: 'stable'
 
-      - name: توليد مجلدات android/ios الناقصة
-       run: flutter create . --platforms=android --project-name=zad_alakhira --org=com.zadalakhira --overwrite
+      - run: flutter create . --platforms=android --project-name=zad_alakhira --org=com.zadalakhira --overwrite
 
-      - name: تنزيل المكتبات
-        run: flutter pub get
+      - run: flutter pub get
 
-      - name: بناء APK (نسخة Release جاهزة للتثبيت)
-        run: flutter build apk --release
+      - run: flutter build apk --release
 
-      - name: رفع الـ APK كـ Artifact
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: zad-alakhira-apk
           path: build/app/outputs/flutter-apk/app-release.apk
