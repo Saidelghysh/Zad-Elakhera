@@ -16,7 +16,7 @@ jobs:
           flutter-version: '3.24.0'
           channel: 'stable'
 
-     - run: flutter create . --platforms=android --project-name=zad_alakhira --org=com.zadalakhira
+      - run: flutter create . --platforms=android --project-name=zad_alakhira --org=com.zadalakhira
 
       - run: flutter pub get
 
