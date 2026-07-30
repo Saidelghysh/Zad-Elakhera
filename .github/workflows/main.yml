@@ -2,7 +2,9 @@ name: Build APK
 
 on:
   push:
-    branches: [ "main", "master" ]
+    branches:
+      - main
+      - master
   workflow_dispatch: {}
 
 jobs:
@@ -10,18 +12,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.0'
-          channel: 'stable'
-
+          flutter-version: 3.24.0
+          channel: stable
       - run: flutter create . --platforms=android --project-name=zad_alakhira --org=com.zadalakhira
-
       - run: flutter pub get
-
       - run: flutter build apk --release
-
       - uses: actions/upload-artifact@v4
         with:
           name: zad-alakhira-apk
