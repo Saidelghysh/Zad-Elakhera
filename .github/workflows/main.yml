@@ -14,7 +14,6 @@ jobs:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: 3.24.0
           channel: stable
       - run: flutter create . --platforms=android --project-name=zad_alakhira --org=com.zadalakhira
       - run: flutter pub get
