@@ -12,50 +12,20 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # State management
   flutter_riverpod: ^2.5.1
-
-  # Routing
   go_router: ^14.2.0
-
-  # Local storage
   hive: ^2.2.3
   hive_flutter: ^1.1.0
-
-  # Fonts / typography (Arabic premium fonts: Cairo / Amiri via Google Fonts)
   google_fonts: ^6.2.1
-
-  # Icons
   cupertino_icons: ^1.0.8
-
-  # Prayer times calculation (actively maintained fork with named constructor params)
   adhan_dart: ^2.0.1
-
-  # Location + permissions
   geolocator: ^13.0.1
   permission_handler: ^11.3.1
-
-  # Qibla compass sensor
-  flutter_qiblah: ^3.0.0
-
-  # Audio playback (recitations, azkar audio)
-  just_audio: ^0.9.42
-  audio_service: ^0.18.15
-
-  # Networking (tafsir / audio streaming APIs)
   dio: ^5.6.0
-
-  # Local notifications (adhan reminders, daily reminders)
   flutter_local_notifications: ^17.2.3
-
-  # Animations
   animate_do: ^3.3.4
   lottie: ^3.1.2
-
-  # Haptics
   vibration: ^2.0.0
-
-  # Utilities
   intl: ^0.19.0
   shared_preferences: ^2.3.2
 
@@ -68,24 +38,3 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-
-  assets:
-    - assets/images/
-    - assets/icons/
-    - assets/audio/azkar/
-    - assets/lottie/
-    - assets/fonts/
-
-  fonts:
-    - family: Amiri
-      fonts:
-        - asset: assets/fonts/Amiri-Regular.ttf
-        - asset: assets/fonts/Amiri-Bold.ttf
-          weight: 700
-    - family: Cairo
-      fonts:
-        - asset: assets/fonts/Cairo-Regular.ttf
-        - asset: assets/fonts/Cairo-Medium.ttf
-          weight: 500
-        - asset: assets/fonts/Cairo-Bold.ttf
-          weight: 700
