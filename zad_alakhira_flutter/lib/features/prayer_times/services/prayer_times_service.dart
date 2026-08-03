@@ -9,8 +9,8 @@ class PrayerTimesCalculationService {
   static DailyPrayerTimes calculate(AppLocation location, {DateTime? forDate}) {
     final coordinates = Coordinates(location.latitude, location.longitude);
 
-    final params = CalculationMethod.MuslimWorldLeague();
-    params.madhab = Madhab.Shafi;
+    final params = CalculationMethodParameters.muslimWorldLeague();
+    params.madhab = Madhab.shafi;
 
     final prayerTimes = PrayerTimes(
       coordinates: coordinates,
