@@ -9,6 +9,8 @@ import 'features/dua_walidi/dua_counter_service.dart';
 import 'features/tasbeeh/tasbeeh_service.dart';
 
 Future<void> main() async {
+  // يجعل رسائل الخطأ تظهر بوضوح على الشاشة حتى في وضع Release
+  // (بدل شاشة بيضاء فاضية بدون أي تفاصيل عن سبب المشكلة).
   ErrorWidget.builder = (FlutterErrorDetails details) {
     return Material(
       color: const Color(0xFF04060D),
@@ -41,6 +43,7 @@ Future<void> main() async {
 
     runApp(const ProviderScope(child: ZadAlakhiraApp()));
   }, (error, stack) {
+    // لو صار خطأ قبل حتى ما يفتح أي شاشة، نعرضه بدل ما يطلع بياض فاضي.
     runApp(
       MaterialApp(
         debugShowCheckedModeBanner: false,
