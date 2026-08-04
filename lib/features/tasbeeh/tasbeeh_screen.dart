@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:vibration/vibration.dart';
+import 'package:flutter/services.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import 'tasbeeh_service.dart';
@@ -35,14 +35,10 @@ class _TasbeehScreenState extends State<TasbeehScreen> {
     final newCount = await TasbeehService.increment();
     setState(() => _count = newCount);
 
-    if (await Vibration.hasVibrator() ?? false) {
-      Vibration.vibrate(duration: 30);
-    }
+    HapticFeedback.lightImpact();
 
     if (_count % _target == 0) {
-      if (await Vibration.hasVibrator() ?? false) {
-        Vibration.vibrate(pattern: [0, 60, 60, 60]);
-      }
+      HapticFeedback.mediumImpact();
     }
   }
 
