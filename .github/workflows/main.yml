@@ -23,8 +23,23 @@ jobs:
         run: |
           sed -i -E 's/^([[:space:]]*)compileSdk[[:space:]]*=?.*/\1compileSdk = 36/' android/app/build.gradle.kts
           sed -i -E 's/^([[:space:]]*)targetSdk[[:space:]]*=?.*/\1targetSdk = 36/' android/app/build.gradle.kts
-          echo "----- Result: -----"
+          echo "----- app/build.gradle.kts result: -----"
           grep -n "compileSdk\|targetSdk" android/app/build.gradle.kts
+
+      - name: Force compileSdk 36 for ALL plugin subprojects too
+        run: |
+          cat >> android/build.gradle.kts << 'GRADLE_EOF'
+
+          subprojects {
+              afterEvaluate {
+                  extensions.findByType(com.android.build.gradle.BaseExtension::class.java)?.let {
+                      it.compileSdkVersion(36)
+                  }
+              }
+          }
+          GRADLE_EOF
+          echo "----- android/build.gradle.kts result: -----"
+          tail -n 15 android/build.gradle.kts
 
       - run: flutter pub get
 
