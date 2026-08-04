@@ -19,6 +19,13 @@ jobs:
 
       - run: flutter create . --platforms=android --project-name=zad_alakhira --org=com.zadalakhira
 
+      - name: Opt out of AGP 9's new DSL (official Google workaround until plugins catch up)
+        run: |
+          echo "android.newDsl=false" >> android/gradle.properties
+          echo "android.builtInKotlin=false" >> android/gradle.properties
+          echo "----- android/gradle.properties result: -----"
+          cat android/gradle.properties
+
       - name: Force newer Android compileSdk/targetSdk (34+ required by some plugins)
         run: |
           sed -i -E 's/^([[:space:]]*)compileSdk[[:space:]]*=?.*/\1compileSdk = 36/' android/app/build.gradle.kts
@@ -31,20 +38,15 @@ jobs:
           cat >> android/build.gradle.kts << 'GRADLE_EOF'
 
           subprojects {
-              plugins.withId("com.android.library") {
-                  extensions.configure<com.android.build.gradle.LibraryExtension> {
-                      compileSdk = 36
-                  }
-              }
-              plugins.withId("com.android.application") {
-                  extensions.configure<com.android.build.gradle.AppExtension> {
-                      compileSdk = 36
+              afterEvaluate {
+                  extensions.findByType(com.android.build.gradle.BaseExtension::class.java)?.let {
+                      it.compileSdkVersion(36)
                   }
               }
           }
           GRADLE_EOF
           echo "----- android/build.gradle.kts result: -----"
-          tail -n 20 android/build.gradle.kts
+          tail -n 15 android/build.gradle.kts
 
       - run: flutter pub get
 
