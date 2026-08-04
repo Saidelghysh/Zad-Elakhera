@@ -31,15 +31,20 @@ jobs:
           cat >> android/build.gradle.kts << 'GRADLE_EOF'
 
           subprojects {
-              afterEvaluate {
-                  extensions.findByType(com.android.build.gradle.BaseExtension::class.java)?.let {
-                      it.compileSdkVersion(36)
+              plugins.withId("com.android.library") {
+                  extensions.configure<com.android.build.gradle.LibraryExtension> {
+                      compileSdk = 36
+                  }
+              }
+              plugins.withId("com.android.application") {
+                  extensions.configure<com.android.build.gradle.AppExtension> {
+                      compileSdk = 36
                   }
               }
           }
           GRADLE_EOF
           echo "----- android/build.gradle.kts result: -----"
-          tail -n 15 android/build.gradle.kts
+          tail -n 20 android/build.gradle.kts
 
       - run: flutter pub get
 
