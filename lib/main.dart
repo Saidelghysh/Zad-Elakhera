@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'core/theme/app_theme.dart';
 import 'core/router/app_router.dart';
@@ -31,6 +32,10 @@ Future<void> main() async {
 
   runZonedGuarded(() async {
     WidgetsFlutterBinding.ensureInitialized();
+
+    // يمنع محاولة تحميل الخطوط من الإنترنت عند فتح التطبيق بدون اتصال —
+    // يستخدم خط النظام كبديل تلقائي بدل ما يتوقف التطبيق بالكامل.
+    GoogleFonts.config.allowRuntimeFetching = false;
 
     await SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
