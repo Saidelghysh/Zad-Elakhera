@@ -16,7 +16,6 @@ dependencies:
   go_router: ^14.2.0
   hive: ^2.2.3
   hive_flutter: ^1.1.0
-  google_fonts: ^6.2.1
   cupertino_icons: ^1.0.8
   adhan_dart: ^2.0.1
   geolocator: ^13.0.1
