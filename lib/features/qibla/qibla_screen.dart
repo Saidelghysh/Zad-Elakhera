@@ -174,6 +174,49 @@ class _QiblaResult {
   const _QiblaResult({required this.bearing, required this.isFallback});
 }
 
+class _QiblaMessage extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String message;
+  final VoidCallback onRetry;
+
+  const _QiblaMessage({
+    required this.icon,
+    required this.title,
+    required this.message,
+    required this.onRetry,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: AppColors.gold, size: 32),
+            const SizedBox(height: 14),
+            Text(title, style: AppTextStyles.h3, textAlign: TextAlign.center),
+            const SizedBox(height: 8),
+            Text(message, style: AppTextStyles.bodySecondary, textAlign: TextAlign.center),
+            const SizedBox(height: 18),
+            OutlinedButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('إعادة المحاولة'),
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: AppColors.gold, width: 0.7),
+                foregroundColor: AppColors.gold,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _CompassTicksPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
