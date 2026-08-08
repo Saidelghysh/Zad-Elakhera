@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,31 +9,68 @@ import 'core/router/app_router.dart';
 import 'features/dua_walidi/dua_counter_service.dart';
 import 'features/tasbeeh/tasbeeh_service.dart';
 
-Future<void> main() async {
-  // يجعل رسائل الخطأ تظهر بوضوح على الشاشة حتى في وضع Release
-  // (بدل شاشة بيضاء فاضية بدون أي تفاصيل عن سبب المشكلة).
-  ErrorWidget.builder = (FlutterErrorDetails details) {
-    return Material(
-      color: const Color(0xFF04060D),
-      child: Center(
+/// شاشة خطأ موحّدة تعرض نص الاستثناء + مكان حدوثه بالضبط (stack trace) —
+/// عشان أي خطأ مستقبلي يتحدد مكانه من أول صورة، بدل تخمين على عدة مراحل.
+Widget _errorScreen(String title, String exception, StackTrace? stack) {
+  return MaterialApp(
+    debugShowCheckedModeBanner: false,
+    home: Scaffold(
+      backgroundColor: const Color(0xFF04060D),
+      body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(16),
           child: SingleChildScrollView(
-            child: Text(
-              'حدث خطأ:\n\n${details.exceptionAsString()}',
-              style: const TextStyle(color: Colors.white, fontSize: 13),
-              textDirection: TextDirection.ltr,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(color: Colors.orange, fontSize: 14, fontWeight: FontWeight.bold),
+                  textDirection: TextDirection.ltr,
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  exception,
+                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                  textDirection: TextDirection.ltr,
+                ),
+                if (stack != null) ...[
+                  const SizedBox(height: 16),
+                  const Text(
+                    '— مكان الخطأ بالتفصيل —',
+                    style: TextStyle(color: Colors.grey, fontSize: 11),
+                    textDirection: TextDirection.ltr,
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    stack.toString(),
+                    style: const TextStyle(color: Colors.grey, fontSize: 10),
+                    textDirection: TextDirection.ltr,
+                  ),
+                ],
+              ],
             ),
           ),
         ),
       ),
-    );
+    ),
+  );
+}
+
+Future<void> main() async {
+  // يجعل أي خطأ أثناء بناء أي شاشة (widget) يظهر بالتفصيل (مع مكانه بالضبط)
+  // على الشاشة نفسها حتى في وضع Release، بدل شاشة بيضاء فاضية أو رسالة ناقصة.
+  ErrorWidget.builder = (FlutterErrorDetails details) {
+    return _errorScreen('حدث خطأ أثناء بناء الشاشة:', details.exceptionAsString(), details.stack);
+  };
+
+  // يلتقط أي خطأ يصير داخل إطار عمل Flutter نفسه (مو بس أثناء بناء شاشة).
+  FlutterError.onError = (FlutterErrorDetails details) {
+    FlutterError.presentError(details);
   };
 
   runZonedGuarded(() async {
     WidgetsFlutterBinding.ensureInitialized();
-
-    // ملاحظة: التطبيق يستخدم خط النظام الافتراضي (بدون اعتماد على الإنترنت).
 
     await SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
@@ -45,27 +83,8 @@ Future<void> main() async {
 
     runApp(const ProviderScope(child: ZadAlakhiraApp()));
   }, (error, stack) {
-    // لو صار خطأ قبل حتى ما يفتح أي شاشة، نعرضه بدل ما يطلع بياض فاضي.
-    runApp(
-      MaterialApp(
-        debugShowCheckedModeBanner: false,
-        home: Scaffold(
-          backgroundColor: const Color(0xFF04060D),
-          body: Center(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: SingleChildScrollView(
-                child: Text(
-                  'حدث خطأ عند بدء التشغيل:\n\n$error',
-                  style: const TextStyle(color: Colors.white, fontSize: 13),
-                  textDirection: TextDirection.ltr,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
+    // لو صار خطأ قبل حتى ما يفتح أي شاشة (مثلاً أثناء تهيئة Hive)، نعرضه بالتفصيل.
+    runApp(_errorScreen('حدث خطأ عند بدء التشغيل:', error.toString(), stack));
   });
 }
 
