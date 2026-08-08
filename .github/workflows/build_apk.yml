@@ -24,6 +24,12 @@ jobs:
           echo "android.newDsl=false" >> android/gradle.properties
           echo "android.builtInKotlin=false" >> android/gradle.properties
 
+      - name: Add required Android permissions (location, internet)
+        run: |
+          sed -i 's#<manifest xmlns:android="http://schemas.android.com/apk/res/android">#<manifest xmlns:android="http://schemas.android.com/apk/res/android">\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>\n    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>\n    <uses-permission android:name="android.permission.INTERNET"/>#' android/app/src/main/AndroidManifest.xml
+          echo "----- AndroidManifest.xml result: -----"
+          cat android/app/src/main/AndroidManifest.xml
+
       - run: flutter pub get
 
       - run: flutter build apk --release

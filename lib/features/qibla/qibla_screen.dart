@@ -54,6 +54,14 @@ class _QiblaScreenState extends State<QiblaScreen> {
             if (snapshot.connectionState != ConnectionState.done) {
               return const Center(child: CircularProgressIndicator(color: AppColors.gold));
             }
+            if (snapshot.hasError || !snapshot.hasData) {
+              return _QiblaMessage(
+                icon: Icons.error_outline_rounded,
+                title: 'تعذّر حساب اتجاه القبلة',
+                message: 'حدث خطأ غير متوقع. تأكد من تفعيل الموقع وإعطاء الإذن، ثم أعد المحاولة.',
+                onRetry: _retry,
+              );
+            }
             final result = snapshot.data!;
             return Column(
               children: [
