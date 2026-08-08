@@ -38,7 +38,6 @@ final GoRouter appRouter = GoRouter(
 
     // وحدات تحتاج مصدر بيانات خارجي (صوتيات/تفسير/محتوى تعليمي) — بنية جاهزة، بيانات تُوصل لاحقًا.
     GoRoute(
-    GoRoute(
       path: '/recitations',
       builder: (context, state) => const ComingSoonScreen(
         title: 'التلاوات',
