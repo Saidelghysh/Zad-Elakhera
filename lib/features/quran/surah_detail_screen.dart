@@ -1,13 +1,26 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
+import '../../core/widgets/glass_card.dart';
+import '../../core/widgets/gold_divider.dart';
 import 'models/surah_model.dart';
 import 'services/quran_api_service.dart';
 
-/// شاشة قراءة سورة كاملة — نص عثماني قياسي، مع حفظ آخر آية مقروءة تلقائيًا.
+/// تحويل الأرقام الإنجليزية إلى أرقام عربية-هندية (١٢٣) للمظهر التقليدي.
+String _arabicDigits(int number) {
+  const western = '0123456789';
+  const arabic = '٠١٢٣٤٥٦٧٨٩';
+  return number.toString().split('').map((c) {
+    final i = western.indexOf(c);
+    return i == -1 ? c : arabic[i];
+  }).join();
+}
+
+/// شاشة قراءة سورة كاملة — نص عثماني قياسي، بتصميم "صفحة مصحف" فاخر:
+/// عنوان مزخرف، بسملة، وأرقام آيات بالخط العربي التقليدي.
 class SurahDetailScreen extends StatefulWidget {
   final int surahNumber;
-  final SurahInfo? surahInfo; // يُمرَّر من شاشة القائمة لعرض العنوان فورًا بدون انتظار
+  final SurahInfo? surahInfo;
 
   const SurahDetailScreen({super.key, required this.surahNumber, this.surahInfo});
 
@@ -27,9 +40,14 @@ class _SurahDetailScreenState extends State<SurahDetailScreen> {
 
   void _retry() => setState(() => _future = QuranApiService.getSurahAyahs(widget.surahNumber));
 
+  // البسملة تُعرض كعنوان مستقل قبل كل سورة، ما عدا التوبة (لا بسملة فيها)
+  // والفاتحة (لأن آيتها الأولى هي البسملة نفسها، فلا داعي لتكرارها).
+  bool get _showBismillahHeader => widget.surahNumber != 9 && widget.surahNumber != 1;
+
   @override
   Widget build(BuildContext context) {
-    final title = widget.surahInfo?.name ?? 'سورة ${widget.surahNumber}';
+    final info = widget.surahInfo;
+    final title = info?.name ?? 'سورة ${widget.surahNumber}';
 
     return Scaffold(
       backgroundColor: AppColors.royalBlack,
@@ -83,46 +101,88 @@ class _SurahDetailScreenState extends State<SurahDetailScreen> {
             }
 
             final ayahs = snapshot.data!;
-            return NotificationListener<ScrollEndNotification>(
-              onNotification: (_) => false,
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
-                child: Directionality(
-                  textDirection: TextDirection.rtl,
-                  child: Text.rich(
-                    TextSpan(
-                      children: ayahs.map((a) {
-                        return TextSpan(
-                          children: [
-                            TextSpan(text: '${a.text} '),
-                            WidgetSpan(
-                              alignment: PlaceholderAlignment.middle,
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 4),
-                                child: Container(
-                                  width: 26,
-                                  height: 26,
-                                  alignment: Alignment.center,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    border: Border.all(color: AppColors.gold.withOpacity(0.7)),
-                                  ),
-                                  child: Text(
-                                    '${a.numberInSurah}',
-                                    style: AppTextStyles.caption.copyWith(color: AppColors.gold, fontSize: 10),
+            return SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+              child: Column(
+                children: [
+                  // عنوان السورة المزخرف
+                  Column(
+                    children: [
+                      Text(
+                        info?.name ?? title,
+                        style: AppTextStyles.h1.copyWith(color: AppColors.gold, fontSize: 26),
+                      ),
+                      const SizedBox(height: 8),
+                      const GoldDivider(width: 90),
+                      const SizedBox(height: 8),
+                      if (info != null)
+                        Text(
+                          '${info.isMeccan ? "مكية" : "مدنية"} · ${_arabicDigits(info.numberOfAyahs)} آية',
+                          style: AppTextStyles.caption,
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+
+                  if (_showBismillahHeader) ...[
+                    Text(
+                      'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ',
+                      textDirection: TextDirection.rtl,
+                      textAlign: TextAlign.center,
+                      style: AppTextStyles.quranAyah.copyWith(
+                        fontSize: _fontSize + 2,
+                        color: AppColors.gold,
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                  ],
+
+                  // "صفحة" النص — إطار فاخر بخلفية بطاقة داكنة وحدود ذهبية رفيعة
+                  GlassCard(
+                    padding: const EdgeInsets.all(18),
+                    borderColor: AppColors.gold.withOpacity(0.35),
+                    child: Directionality(
+                      textDirection: TextDirection.rtl,
+                      child: Text.rich(
+                        TextSpan(
+                          children: ayahs.map((a) {
+                            return TextSpan(
+                              children: [
+                                TextSpan(text: '${a.text} '),
+                                WidgetSpan(
+                                  alignment: PlaceholderAlignment.middle,
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                                    child: Container(
+                                      width: 28,
+                                      height: 28,
+                                      alignment: Alignment.center,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        border: Border.all(color: AppColors.gold.withOpacity(0.8), width: 0.8),
+                                      ),
+                                      child: Text(
+                                        _arabicDigits(a.numberInSurah),
+                                        style: AppTextStyles.caption.copyWith(
+                                          color: AppColors.gold,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ),
-                            const TextSpan(text: '  '),
-                          ],
-                        );
-                      }).toList(),
+                                const TextSpan(text: '  '),
+                              ],
+                            );
+                          }).toList(),
+                        ),
+                        style: AppTextStyles.quranAyah.copyWith(fontSize: _fontSize, height: 2.3),
+                        textAlign: TextAlign.justify,
+                      ),
                     ),
-                    style: AppTextStyles.quranAyah.copyWith(fontSize: _fontSize),
-                    textAlign: TextAlign.justify,
                   ),
-                ),
+                ],
               ),
             );
           },
