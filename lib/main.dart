@@ -7,6 +7,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'core/theme/app_theme.dart';
 import 'core/router/app_router.dart';
 import 'features/dua_walidi/dua_counter_service.dart';
+import 'features/quran/services/quran_api_service.dart';
 import 'features/settings/settings_service.dart';
 import 'features/tasbeeh/tasbeeh_service.dart';
 
@@ -82,6 +83,7 @@ Future<void> main() async {
     await DuaCounterService.init();
     await TasbeehService.init();
     await SettingsService.init();
+    await QuranApiService.init();
 
     runApp(const ProviderScope(child: ZadAlakhiraApp()));
   }, (error, stack) {

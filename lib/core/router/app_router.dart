@@ -9,6 +9,9 @@ import '../../features/azkar/azkar_screen.dart';
 import '../../features/tasbeeh/tasbeeh_screen.dart';
 import '../../features/dua_walidi/dua_walidi_screen.dart';
 import '../../features/settings/settings_screen.dart';
+import '../../features/quran/quran_screen.dart';
+import '../../features/quran/surah_detail_screen.dart';
+import '../../features/quran/models/surah_model.dart';
 
 final GoRouter appRouter = GoRouter(
   initialLocation: '/splash',
@@ -22,15 +25,19 @@ final GoRouter appRouter = GoRouter(
     GoRoute(path: '/dua-walidi', builder: (context, state) => const DuaWalidiScreen()),
     GoRoute(path: '/settings', builder: (context, state) => const SettingsScreen()),
 
-    // وحدات تحتاج مصدر بيانات خارجي (نصوص/صوتيات) — بنية جاهزة، بيانات تُوصل لاحقًا.
+    // القرآن الكريم — نص عثماني حقيقي عبر Al Quran Cloud API، مع تخزين محلي للقراءة بدون إنترنت.
+    GoRoute(path: '/quran', builder: (context, state) => const QuranScreen()),
     GoRoute(
-      path: '/quran',
-      builder: (context, state) => const ComingSoonScreen(
-        title: 'القرآن الكريم',
-        icon: Icons.menu_book_rounded,
-        note: 'وحدة عرض المصحف كاملًا (صفحة/سورة/جزء) جاهزة البنية — تحتاج ربط مصدر نص القرآن.',
-      ),
+      path: '/quran/:number',
+      builder: (context, state) {
+        final number = int.parse(state.pathParameters['number']!);
+        final info = state.extra as SurahInfo?;
+        return SurahDetailScreen(surahNumber: number, surahInfo: info);
+      },
     ),
+
+    // وحدات تحتاج مصدر بيانات خارجي (صوتيات/تفسير/محتوى تعليمي) — بنية جاهزة، بيانات تُوصل لاحقًا.
+    GoRoute(
     GoRoute(
       path: '/recitations',
       builder: (context, state) => const ComingSoonScreen(
