@@ -76,7 +76,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ],
         leading: IconButton(
           icon: const Icon(Icons.settings_outlined),
-          onPressed: () {},
+          onPressed: () => context.push('/settings'),
         ),
       ),
       body: SafeArea(
@@ -109,7 +109,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _navIndex,
-        onTap: (i) => setState(() => _navIndex = i),
+        onTap: (i) {
+          setState(() => _navIndex = i);
+          if (i == 4) context.push('/settings');
+        },
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: 'الرئيسية'),
           BottomNavigationBarItem(icon: Icon(Icons.grid_view_rounded), label: 'المكتبة'),

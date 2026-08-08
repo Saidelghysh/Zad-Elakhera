@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -8,6 +7,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'core/theme/app_theme.dart';
 import 'core/router/app_router.dart';
 import 'features/dua_walidi/dua_counter_service.dart';
+import 'features/settings/settings_service.dart';
 import 'features/tasbeeh/tasbeeh_service.dart';
 
 /// شاشة خطأ موحّدة تعرض نص الاستثناء + مكان حدوثه بالضبط (stack trace) —
@@ -81,6 +81,7 @@ Future<void> main() async {
     await Hive.initFlutter();
     await DuaCounterService.init();
     await TasbeehService.init();
+    await SettingsService.init();
 
     runApp(const ProviderScope(child: ZadAlakhiraApp()));
   }, (error, stack) {

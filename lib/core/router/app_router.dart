@@ -8,6 +8,7 @@ import '../../features/qibla/qibla_screen.dart';
 import '../../features/azkar/azkar_screen.dart';
 import '../../features/tasbeeh/tasbeeh_screen.dart';
 import '../../features/dua_walidi/dua_walidi_screen.dart';
+import '../../features/settings/settings_screen.dart';
 
 final GoRouter appRouter = GoRouter(
   initialLocation: '/splash',
@@ -19,6 +20,7 @@ final GoRouter appRouter = GoRouter(
     GoRoute(path: '/azkar', builder: (context, state) => const AzkarScreen()),
     GoRoute(path: '/tasbeeh', builder: (context, state) => const TasbeehScreen()),
     GoRoute(path: '/dua-walidi', builder: (context, state) => const DuaWalidiScreen()),
+    GoRoute(path: '/settings', builder: (context, state) => const SettingsScreen()),
 
     // وحدات تحتاج مصدر بيانات خارجي (نصوص/صوتيات) — بنية جاهزة، بيانات تُوصل لاحقًا.
     GoRoute(
