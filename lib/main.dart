@@ -8,6 +8,7 @@ import 'core/theme/app_theme.dart';
 import 'core/router/app_router.dart';
 import 'features/dua_walidi/dua_counter_service.dart';
 import 'features/quran/services/quran_api_service.dart';
+import 'features/recitations/services/recitations_api_service.dart';
 import 'features/settings/settings_service.dart';
 import 'features/tasbeeh/tasbeeh_service.dart';
 
@@ -84,6 +85,7 @@ Future<void> main() async {
     await TasbeehService.init();
     await SettingsService.init();
     await QuranApiService.init();
+    await RecitationsApiService.init();
 
     runApp(const ProviderScope(child: ZadAlakhiraApp()));
   }, (error, stack) {

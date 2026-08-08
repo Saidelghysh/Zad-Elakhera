@@ -12,6 +12,9 @@ import '../../features/settings/settings_screen.dart';
 import '../../features/quran/quran_screen.dart';
 import '../../features/quran/surah_detail_screen.dart';
 import '../../features/quran/models/surah_model.dart';
+import '../../features/recitations/recitations_screen.dart';
+import '../../features/recitations/reciter_surahs_screen.dart';
+import '../../features/recitations/models/reciter_model.dart';
 
 final GoRouter appRouter = GoRouter(
   initialLocation: '/splash',
@@ -36,15 +39,18 @@ final GoRouter appRouter = GoRouter(
       },
     ),
 
-    // وحدات تحتاج مصدر بيانات خارجي (صوتيات/تفسير/محتوى تعليمي) — بنية جاهزة، بيانات تُوصل لاحقًا.
+    // التلاوات — تشغيل صوتي حقيقي (mp3quran.net) لأربعة قراء مشهورين.
+    GoRoute(path: '/recitations', builder: (context, state) => const RecitationsScreen()),
     GoRoute(
-      path: '/recitations',
-      builder: (context, state) => const ComingSoonScreen(
-        title: 'التلاوات',
-        icon: Icons.headphones_rounded,
-        note: 'مشغّل صوتي جاهز (تشغيل/تحميل/سرعة/مؤقت نوم) — يحتاج روابط ملفات التلاوات.',
-      ),
+      path: '/recitations/:id',
+      builder: (context, state) {
+        final reciter = state.extra as Reciter;
+        return ReciterSurahsScreen(reciter: reciter);
+      },
     ),
+
+    // وحدات تحتاج مصدر بيانات خارجي (تفسير/محتوى تعليمي) — بنية جاهزة، بيانات تُوصل لاحقًا.
+    GoRoute(
     GoRoute(
       path: '/tafsir',
       builder: (context, state) => const ComingSoonScreen(
