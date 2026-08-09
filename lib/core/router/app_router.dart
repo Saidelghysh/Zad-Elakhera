@@ -51,7 +51,6 @@ final GoRouter appRouter = GoRouter(
 
     // وحدات تحتاج مصدر بيانات خارجي (تفسير/محتوى تعليمي) — بنية جاهزة، بيانات تُوصل لاحقًا.
     GoRoute(
-    GoRoute(
       path: '/tafsir',
       builder: (context, state) => const ComingSoonScreen(
         title: 'التفسير',
