@@ -4,8 +4,8 @@ import 'package:go_router/go_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/widgets/glass_card.dart';
+import '../dua_walidi/dua_counter_service.dart';
 import '../prayer_times/providers/prayer_times_provider.dart';
-import 'reminders.dart';
 import 'widgets/prayer_hero_card.dart';
 import 'widgets/menu_grid.dart';
 import 'widgets/dua_banner.dart';
@@ -27,37 +27,66 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) => _showReminder());
   }
 
+  static const String _duaText =
+      'اللهم اغفر للحاج عبدالحميد إبراهيم الغايش وارحمه وعافه واعف عنه '
+      'وأكرم نزله ووسع مدخله، واغسله بالماء والثلج والبرد، ونقّه من الخطايا '
+      'كما يُنقّى الثوب الأبيض من الدنس، واجعل قبره روضة من رياض الجنة.';
+
+  bool _justPressed = false;
+
   void _showReminder() {
     showDialog(
       context: context,
       barrierColor: Colors.black87,
-      builder: (ctx) => Dialog(
-        backgroundColor: Colors.transparent,
-        child: GlassCard(
-          glow: true,
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.auto_awesome_rounded, color: AppColors.gold, size: 26),
-              const SizedBox(height: 12),
-              Text('تذكير', style: AppTextStyles.h3),
-              const SizedBox(height: 10),
-              Text(
-                Reminders.random(),
-                textAlign: TextAlign.center,
-                style: AppTextStyles.body,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          return Dialog(
+            backgroundColor: Colors.transparent,
+            child: GlassCard(
+              glow: true,
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.favorite_rounded, color: AppColors.gold, size: 26),
+                  const SizedBox(height: 10),
+                  Text('دعاء لوالدي', style: AppTextStyles.h3),
+                  const SizedBox(height: 4),
+                  Text(
+                    'الحاج عبدالحميد إبراهيم الغايش رحمه الله',
+                    textAlign: TextAlign.center,
+                    style: AppTextStyles.caption,
+                  ),
+                  const SizedBox(height: 14),
+                  Text(
+                    _duaText,
+                    textAlign: TextAlign.center,
+                    style: AppTextStyles.duaText.copyWith(fontSize: 14),
+                  ),
+                  const SizedBox(height: 18),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        await DuaCounterService.increment();
+                        setDialogState(() => _justPressed = true);
+                      },
+                      icon: Icon(_justPressed ? Icons.check_rounded : Icons.favorite_rounded),
+                      label: Text(_justPressed ? 'تقبّل الله دعاءك' : 'دعوت الآن'),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  TextButton(
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    child: Text('إغلاق', style: AppTextStyles.button),
+                  ),
+                ],
               ),
-              const SizedBox(height: 16),
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(),
-                child: Text('إغلاق', style: AppTextStyles.button),
-              ),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
-    );
+    ).then((_) => _justPressed = false);
   }
 
   @override

@@ -26,9 +26,15 @@ class PrayerTimesCalculationService {
     final params = _resolveMethod();
     params.madhab = SettingsService.getMadhab() == 'hanafi' ? Madhab.hanafi : Madhab.shafi;
 
+    // نُطبّع التاريخ لمنتصف الليل المحلي (بدون وقت اليوم الحالي) — الحساب
+    // الفلكي يحتاج فقط اليوم/الشهر/السنة، وتمرير وقت اليوم الحالي كان يسبب
+    // انزياحًا خاطئًا في بعض المناطق الزمنية ويُظهر عدّادًا صفريًا (00:00:00).
+    final baseDate = forDate ?? DateTime.now();
+    final normalizedDate = DateTime(baseDate.year, baseDate.month, baseDate.day);
+
     final prayerTimes = PrayerTimes(
       coordinates: coordinates,
-      date: forDate ?? DateTime.now(),
+      date: normalizedDate,
       calculationParameters: params,
     );
 

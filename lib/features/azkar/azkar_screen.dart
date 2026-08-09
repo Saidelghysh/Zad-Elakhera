@@ -4,8 +4,8 @@ import '../../core/theme/app_text_styles.dart';
 import '../../core/widgets/glass_card.dart';
 import 'data/azkar_data.dart';
 
-/// شاشة الأذكار: تبويبات للفئات (صباح/مساء/نوم/سفر/صلاة) وقائمة أذكار
-/// كل ذكر له عداد تكرار خاص به يُحفظ محليًا (تقدّم المستخدم يُصفّر يوميًا).
+/// شاشة الأذكار: تبويبات للفئات الخمس (صباح/مساء/نوم/سفر/صلاة)، كل فئة
+/// بمحتواها الفعلي، وعداد تكرار مستقل لكل ذكر يُصفَّر تلقائيًا عند تبديل الفئة.
 class AzkarScreen extends StatefulWidget {
   const AzkarScreen({super.key});
 
@@ -20,11 +20,20 @@ class _AzkarScreenState extends State<AzkarScreen> {
   @override
   void initState() {
     super.initState();
-    _remaining = morningAzkar.items.map((e) => e.repeat).toList();
+    _remaining = azkarCategories[_tabIndex].items.map((e) => e.repeat).toList();
+  }
+
+  void _switchTab(int index) {
+    setState(() {
+      _tabIndex = index;
+      _remaining = azkarCategories[index].items.map((e) => e.repeat).toList();
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    final category = azkarCategories[_tabIndex];
+
     return Scaffold(
       backgroundColor: AppColors.royalBlack,
       appBar: AppBar(title: Text('الأذكار', style: AppTextStyles.h2)),
@@ -43,7 +52,7 @@ class _AzkarScreenState extends State<AzkarScreen> {
                   return ChoiceChip(
                     label: Text(azkarCategoryNames[i]),
                     selected: selected,
-                    onSelected: (_) => setState(() => _tabIndex = i),
+                    onSelected: (_) => _switchTab(i),
                     backgroundColor: AppColors.navyCard,
                     selectedColor: AppColors.gold.withOpacity(0.2),
                     labelStyle: AppTextStyles.caption.copyWith(
@@ -57,10 +66,10 @@ class _AzkarScreenState extends State<AzkarScreen> {
             Expanded(
               child: ListView.separated(
                 padding: const EdgeInsets.all(16),
-                itemCount: morningAzkar.items.length,
+                itemCount: category.items.length,
                 separatorBuilder: (_, __) => const SizedBox(height: 14),
                 itemBuilder: (context, i) {
-                  final item = morningAzkar.items[i];
+                  final item = category.items[i];
                   final left = _remaining[i];
                   return GlassCard(
                     child: Column(

@@ -15,6 +15,8 @@ import '../../features/quran/models/surah_model.dart';
 import '../../features/recitations/recitations_screen.dart';
 import '../../features/recitations/reciter_surahs_screen.dart';
 import '../../features/recitations/models/reciter_model.dart';
+import '../../features/tafsir/tafsir_screen.dart';
+import '../../features/tafsir/tafsir_detail_screen.dart';
 
 final GoRouter appRouter = GoRouter(
   initialLocation: '/splash',
@@ -49,15 +51,18 @@ final GoRouter appRouter = GoRouter(
       },
     ),
 
-    // وحدات تحتاج مصدر بيانات خارجي (تفسير/محتوى تعليمي) — بنية جاهزة، بيانات تُوصل لاحقًا.
+    // التفسير — الميسر/ابن كثير/السعدي، عبر نفس مصدر نص القرآن.
+    GoRoute(path: '/tafsir', builder: (context, state) => const TafsirScreen()),
     GoRoute(
-      path: '/tafsir',
-      builder: (context, state) => const ComingSoonScreen(
-        title: 'التفسير',
-        icon: Icons.auto_stories_rounded,
-        note: 'عرض التفسير الميسر وابن كثير والسعدي تحت كل آية — يحتاج ربط قاعدة بيانات التفسير.',
-      ),
+      path: '/tafsir/:number',
+      builder: (context, state) {
+        final number = int.parse(state.pathParameters['number']!);
+        final info = state.extra as SurahInfo?;
+        return TafsirDetailScreen(surahNumber: number, surahInfo: info);
+      },
     ),
+
+    // وحدات تحتاج محتوى تعليمي وسائطي — بنية جاهزة، بيانات تُوصل لاحقًا.
     GoRoute(
       path: '/tajweed',
       builder: (context, state) => const ComingSoonScreen(

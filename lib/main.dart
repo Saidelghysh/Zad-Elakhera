@@ -10,6 +10,7 @@ import 'features/dua_walidi/dua_counter_service.dart';
 import 'features/quran/services/quran_api_service.dart';
 import 'features/recitations/services/recitations_api_service.dart';
 import 'features/settings/settings_service.dart';
+import 'features/tafsir/services/tafsir_api_service.dart';
 import 'features/tasbeeh/tasbeeh_service.dart';
 
 /// شاشة خطأ موحّدة تعرض نص الاستثناء + مكان حدوثه بالضبط (stack trace) —
@@ -86,6 +87,7 @@ Future<void> main() async {
     await SettingsService.init();
     await QuranApiService.init();
     await RecitationsApiService.init();
+    await TafsirApiService.init();
 
     runApp(const ProviderScope(child: ZadAlakhiraApp()));
   }, (error, stack) {
