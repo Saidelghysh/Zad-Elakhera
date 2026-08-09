@@ -38,6 +38,17 @@ class _PrayerHeroCardState extends State<PrayerHeroCard> {
   }
 
   @override
+  void didUpdateWidget(covariant PrayerHeroCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // لما توصل بيانات الصلاة الحقيقية بعد حالة التحميل الأولى (كانت صفر)،
+    // نحدّث العداد الداخلي بدل ما يفضل عالقًا على القيمة الأولى.
+    if (oldWidget.nextPrayerName != widget.nextPrayerName ||
+        oldWidget.timeRemaining != widget.timeRemaining) {
+      setState(() => _remaining = widget.timeRemaining);
+    }
+  }
+
+  @override
   void dispose() {
     _timer?.cancel();
     super.dispose();

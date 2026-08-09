@@ -43,6 +43,8 @@ class _TafsirDetailScreenState extends State<TafsirDetailScreen> {
         if (editions.isNotEmpty) {
           _selected = editions.first;
           _tafsirFuture = TafsirApiService.getSurahTafsir(editions.first.identifier, widget.surahNumber);
+        } else {
+          _errorMessage = 'تعذّر إيجاد مصادر تفسير متاحة حاليًا. حاول لاحقًا.';
         }
       });
     } catch (_) {

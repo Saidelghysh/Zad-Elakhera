@@ -24,11 +24,23 @@ jobs:
           echo "android.newDsl=false" >> android/gradle.properties
           echo "android.builtInKotlin=false" >> android/gradle.properties
 
-      - name: Add required Android permissions (location, internet)
+      - name: Add required Android permissions (location, internet, notifications)
         run: |
-          sed -i 's#<manifest xmlns:android="http://schemas.android.com/apk/res/android">#<manifest xmlns:android="http://schemas.android.com/apk/res/android">\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>\n    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>\n    <uses-permission android:name="android.permission.INTERNET"/>#' android/app/src/main/AndroidManifest.xml
+          sed -i 's#<manifest xmlns:android="http://schemas.android.com/apk/res/android">#<manifest xmlns:android="http://schemas.android.com/apk/res/android">\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>\n    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>\n    <uses-permission android:name="android.permission.INTERNET"/>\n    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>\n    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>\n    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>#' android/app/src/main/AndroidManifest.xml
           echo "----- AndroidManifest.xml result: -----"
           cat android/app/src/main/AndroidManifest.xml
+
+      - name: Enable core library desugaring (required by flutter_local_notifications)
+        run: |
+          sed -i -E 's/^([[:space:]]*)compileOptions[[:space:]]*\{/\1compileOptions {\n\1    isCoreLibraryDesugaringEnabled = true/' android/app/build.gradle.kts
+          cat >> android/app/build.gradle.kts << 'GRADLE_EOF'
+
+          dependencies {
+              coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+          }
+          GRADLE_EOF
+          echo "----- app/build.gradle.kts result: -----"
+          cat android/app/build.gradle.kts
 
       - run: flutter pub get
 

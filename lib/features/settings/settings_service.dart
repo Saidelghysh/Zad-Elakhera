@@ -7,6 +7,8 @@ class SettingsService {
   static const String calcMethodKey = 'calculation_method';
   static const String madhabKey = 'madhab';
   static const String athanNotifKey = 'athan_notifications_enabled';
+  static const String adhanVoiceKey = 'adhan_voice_id';
+  static const String reminderMinutesKey = 'reminder_minutes_before';
 
   static Box get _box => Hive.box(boxName);
 
@@ -34,5 +36,17 @@ class SettingsService {
 
   static Future<void> setAthanNotificationsEnabled(bool value) async {
     await _box.put(athanNotifKey, value);
+  }
+
+  static String getAdhanVoiceId() => _box.get(adhanVoiceKey, defaultValue: 'a9') as String;
+
+  static Future<void> setAdhanVoiceId(String id) async {
+    await _box.put(adhanVoiceKey, id);
+  }
+
+  static int getReminderMinutes() => _box.get(reminderMinutesKey, defaultValue: 10) as int;
+
+  static Future<void> setReminderMinutes(int minutes) async {
+    await _box.put(reminderMinutesKey, minutes);
   }
 }

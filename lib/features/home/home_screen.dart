@@ -5,7 +5,9 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/widgets/glass_card.dart';
 import '../dua_walidi/dua_counter_service.dart';
+import '../notifications/notification_service.dart';
 import '../prayer_times/providers/prayer_times_provider.dart';
+import '../settings/settings_service.dart';
 import 'widgets/prayer_hero_card.dart';
 import 'widgets/menu_grid.dart';
 import 'widgets/dua_banner.dart';
@@ -19,6 +21,7 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   int _navIndex = 0;
+  bool _notificationsScheduledThisSession = false;
 
   @override
   void initState() {
@@ -125,6 +128,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
                 data: (state) {
                   final (name, remaining) = state.times.nextPrayer();
+                  if (!_notificationsScheduledThisSession &&
+                      SettingsService.getAthanNotificationsEnabled()) {
+                    _notificationsScheduledThisSession = true;
+                    NotificationService.init().then((_) {
+                      NotificationService.scheduleForToday(
+                        state.times,
+                        reminderMinutes: SettingsService.getReminderMinutes(),
+                      );
+                    });
+                  }
                   return PrayerHeroCard(nextPrayerName: name, timeRemaining: remaining);
                 },
               ),

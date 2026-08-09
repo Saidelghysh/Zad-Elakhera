@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:just_audio/just_audio.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/widgets/glass_card.dart';
 import '../dua_walidi/dua_counter_service.dart';
+import '../notifications/adhan_voice_model.dart';
+import '../notifications/notification_service.dart';
+import '../prayer_times/services/location_service.dart';
+import '../prayer_times/services/prayer_times_service.dart';
 import '../tasbeeh/tasbeeh_service.dart';
 import 'settings_service.dart';
 
@@ -12,6 +17,8 @@ const Map<String, String> _calcMethodLabels = {
   'egyptian': 'الهيئة المصرية العامة للمساحة',
   'karachi': 'جامعة العلوم الإسلامية، كراتشي',
 };
+
+const List<int> _reminderOptions = [5, 10, 15, 20, 30];
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -24,6 +31,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late String _calcMethod;
   late String _madhab;
   late bool _athanNotifications;
+  late String _adhanVoiceId;
+  late int _reminderMinutes;
+
+  final AudioPlayer _previewPlayer = AudioPlayer();
+  String? _playingVoiceId;
 
   @override
   void initState() {
@@ -31,6 +43,64 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _calcMethod = SettingsService.getCalculationMethod();
     _madhab = SettingsService.getMadhab();
     _athanNotifications = SettingsService.getAthanNotificationsEnabled();
+    _adhanVoiceId = SettingsService.getAdhanVoiceId();
+    _reminderMinutes = SettingsService.getReminderMinutes();
+  }
+
+  @override
+  void dispose() {
+    _previewPlayer.dispose();
+    super.dispose();
+  }
+
+  Future<void> _togglePreview(AdhanVoice voice) async {
+    if (_playingVoiceId == voice.id) {
+      await _previewPlayer.stop();
+      setState(() => _playingVoiceId = null);
+      return;
+    }
+    try {
+      setState(() => _playingVoiceId = voice.id);
+      await _previewPlayer.setUrl(voice.url);
+      await _previewPlayer.play();
+      _previewPlayer.playerStateStream.listen((state) {
+        if (state.processingState == ProcessingState.completed && mounted) {
+          setState(() => _playingVoiceId = null);
+        }
+      });
+    } catch (_) {
+      if (mounted) {
+        setState(() => _playingVoiceId = null);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تعذّر تشغيل هذا الصوت، تأكد من اتصالك بالإنترنت.')),
+        );
+      }
+    }
+  }
+
+  Future<void> _rescheduleNotifications() async {
+    if (!_athanNotifications) {
+      await NotificationService.cancelAll();
+      return;
+    }
+    try {
+      await NotificationService.init();
+      await NotificationService.requestPermission();
+      final location = await LocationService.getCurrentLocation();
+      final times = PrayerTimesCalculationService.calculate(location);
+      await NotificationService.scheduleForToday(times, reminderMinutes: _reminderMinutes);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تم جدولة تنبيهات اليوم بنجاح')),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تعذّرت جدولة التنبيهات — تأكد من إذن الموقع والإشعارات')),
+        );
+      }
+    }
   }
 
   @override
@@ -63,6 +133,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       if (value == null) return;
                       await SettingsService.setCalculationMethod(value);
                       setState(() => _calcMethod = value);
+                      _rescheduleNotifications();
                     },
                   ),
                   const SizedBox(height: 14),
@@ -77,6 +148,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           onTap: () async {
                             await SettingsService.setMadhab('shafi');
                             setState(() => _madhab = 'shafi');
+                            _rescheduleNotifications();
                           },
                         ),
                       ),
@@ -88,6 +160,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           onTap: () async {
                             await SettingsService.setMadhab('hanafi');
                             setState(() => _madhab = 'hanafi');
+                            _rescheduleNotifications();
                           },
                         ),
                       ),
@@ -97,22 +170,88 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
             const SizedBox(height: 24),
-            _SectionTitle('الإشعارات'),
+            _SectionTitle('إشعارات الأذان'),
             const SizedBox(height: 10),
             GlassCard(
-              child: SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                activeThumbColor: AppColors.gold,
-                title: Text('تنبيه دخول وقت الصلاة', style: AppTextStyles.body),
-                subtitle: Text(
-                  'يحتاج تفعيل هذا لاحقًا بربط مكتبة إشعارات مخصصة — الخيار محفوظ الآن كتفضيل فقط.',
-                  style: AppTextStyles.caption,
-                ),
-                value: _athanNotifications,
-                onChanged: (value) async {
-                  await SettingsService.setAthanNotificationsEnabled(value);
-                  setState(() => _athanNotifications = value);
-                },
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    activeThumbColor: AppColors.gold,
+                    title: Text('تفعيل تنبيهات الصلاة', style: AppTextStyles.body),
+                    subtitle: Text(
+                      'تنبيه قبل الصلاة + إشعار عند دخول الوقت (تُجدَّد يوميًا عند فتح التطبيق).',
+                      style: AppTextStyles.caption,
+                    ),
+                    value: _athanNotifications,
+                    onChanged: (value) async {
+                      await SettingsService.setAthanNotificationsEnabled(value);
+                      setState(() => _athanNotifications = value);
+                      _rescheduleNotifications();
+                    },
+                  ),
+                  if (_athanNotifications) ...[
+                    const SizedBox(height: 10),
+                    Divider(color: AppColors.surfaceBorder.withOpacity(0.5)),
+                    const SizedBox(height: 10),
+                    Text('التنبيه قبل الصلاة بـ', style: AppTextStyles.body),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      children: _reminderOptions.map((m) {
+                        final selected = _reminderMinutes == m;
+                        return ChoiceChip(
+                          label: Text('$m د'),
+                          selected: selected,
+                          onSelected: (_) async {
+                            await SettingsService.setReminderMinutes(m);
+                            setState(() => _reminderMinutes = m);
+                            _rescheduleNotifications();
+                          },
+                          backgroundColor: AppColors.navyCardAlt,
+                          selectedColor: AppColors.gold.withOpacity(0.25),
+                          labelStyle: AppTextStyles.caption.copyWith(
+                            color: selected ? AppColors.gold : AppColors.textMuted,
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            _SectionTitle('صوت الأذان'),
+            const SizedBox(height: 4),
+            Text('اختر صوت المؤذن، واضغط ▶ للاستماع قبل الاختيار', style: AppTextStyles.caption),
+            const SizedBox(height: 10),
+            GlassCard(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Column(
+                children: adhanVoices.map((voice) {
+                  final selected = _adhanVoiceId == voice.id;
+                  final playing = _playingVoiceId == voice.id;
+                  return ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    onTap: () async {
+                      await SettingsService.setAdhanVoiceId(voice.id);
+                      setState(() => _adhanVoiceId = voice.id);
+                    },
+                    leading: Icon(
+                      selected ? Icons.radio_button_checked_rounded : Icons.radio_button_off_rounded,
+                      color: selected ? AppColors.gold : AppColors.textMuted,
+                    ),
+                    title: Text(voice.name, style: AppTextStyles.body),
+                    trailing: IconButton(
+                      icon: Icon(
+                        playing ? Icons.stop_circle_rounded : Icons.play_circle_outline_rounded,
+                        color: AppColors.gold,
+                      ),
+                      onPressed: () => _togglePreview(voice),
+                    ),
+                  );
+                }).toList(),
               ),
             ),
             const SizedBox(height: 24),

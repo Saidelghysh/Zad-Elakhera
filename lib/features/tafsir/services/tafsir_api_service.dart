@@ -18,11 +18,12 @@ class TafsirApiService {
     receiveTimeout: const Duration(seconds: 20),
   ));
 
-  // الأسماء اللي ندوّر عليها ضمن نسخ التفسير العربية المتاحة بالواجهة.
-  static const Map<String, String> _wantedTafsirs = {
-    'ميسر': 'التفسير الميسر',
-    'كثير': 'تفسير ابن كثير',
-    'سعدي': 'تفسير السعدي',
+  // كلمات مفتاحية (عربي + إنجليزي) ندوّر عليها ضمن أسماء نسخ التفسير —
+  // بعض أسماء النسخ بالواجهة تجي بالإنجليزي حتى لو المحتوى نفسه عربي.
+  static const Map<String, List<String>> _wantedTafsirs = {
+    'التفسير الميسر': ['ميسر', 'muyassar'],
+    'تفسير ابن كثير': ['كثير', 'kathir', 'katheer'],
+    'تفسير السعدي': ['سعدي', 'سعدى', 'saadi', 'sadi', "sa'di"],
   };
 
   static Future<void> init() async {
@@ -47,12 +48,17 @@ class TafsirApiService {
 
     final found = <TafsirEdition>[];
     for (final entry in _wantedTafsirs.entries) {
+      final keywords = entry.value;
       final match = all.firstWhere(
-        (e) => (e['name'] as String).contains(entry.key),
+        (e) {
+          final name = (e['name'] as String? ?? '').toLowerCase();
+          final englishName = (e['englishName'] as String? ?? '').toLowerCase();
+          return keywords.any((kw) => name.contains(kw.toLowerCase()) || englishName.contains(kw.toLowerCase()));
+        },
         orElse: () => null,
       );
       if (match == null) continue;
-      found.add(TafsirEdition(identifier: match['identifier'] as String, name: entry.value));
+      found.add(TafsirEdition(identifier: match['identifier'] as String, name: entry.key));
     }
 
     if (found.isNotEmpty) {
