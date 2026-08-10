@@ -95,6 +95,7 @@ class NotificationService {
         tz.TZDateTime.from(time, tz.local),
         details,
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
       );
     } catch (_) {
       // لو فشلت الجدولة الدقيقة لأي سبب (مثلًا صلاحية التنبيهات الدقيقة
