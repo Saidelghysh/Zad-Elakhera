@@ -21,46 +21,78 @@ class TafsirDetailScreen extends StatefulWidget {
 class _TafsirDetailScreenState extends State<TafsirDetailScreen> {
   List<TafsirEdition> _editions = [];
   TafsirEdition? _selected;
-  Future<List<Ayah>>? _ayahsFuture;
-  Future<List<TafsirAyah>>? _tafsirFuture;
-  bool _loadingEditions = true;
+  List<Ayah> _ayahs = [];
+  Map<int, String> _tafsirMap = {};
+
+  bool _loading = true;
+  bool _loadingTafsirOnly = false;
   String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
-    _ayahsFuture = QuranApiService.getSurahAyahs(widget.surahNumber);
-    _loadEditions();
+    _loadAll();
   }
 
-  Future<void> _loadEditions() async {
+  Future<void> _loadAll() async {
     try {
+      // نجيب نص القرآن أولًا (لازم نعرف عدد آيات السورة قبل ما نطلب تفسيرها).
+      final ayahs = await QuranApiService.getSurahAyahs(widget.surahNumber);
       final editions = await TafsirApiService.getAvailableEditions();
+
+      if (!mounted) return;
+
+      if (editions.isEmpty) {
+        setState(() {
+          _ayahs = ayahs;
+          _loading = false;
+          _errorMessage = 'تعذّر إيجاد مصادر تفسير متاحة حاليًا. حاول لاحقًا.';
+        });
+        return;
+      }
+
+      final tafsirList = await TafsirApiService.getSurahTafsir(
+        editions.first.identifier,
+        widget.surahNumber,
+        ayahs.length,
+      );
+
       if (!mounted) return;
       setState(() {
+        _ayahs = ayahs;
         _editions = editions;
-        _loadingEditions = false;
-        if (editions.isNotEmpty) {
-          _selected = editions.first;
-          _tafsirFuture = TafsirApiService.getSurahTafsir(editions.first.identifier, widget.surahNumber);
-        } else {
-          _errorMessage = 'تعذّر إيجاد مصادر تفسير متاحة حاليًا. حاول لاحقًا.';
-        }
+        _selected = editions.first;
+        _tafsirMap = {for (final t in tafsirList) t.numberInSurah: t.text};
+        _loading = false;
       });
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _loadingEditions = false;
-        _errorMessage = 'تعذّر تحميل مصادر التفسير. تأكد من اتصالك بالإنترنت.';
+        _loading = false;
+        _errorMessage = 'تعذّر تحميل التفسير. تأكد من اتصالك بالإنترنت ثم أعد المحاولة.';
       });
     }
   }
 
-  void _selectEdition(TafsirEdition edition) {
+  Future<void> _selectEdition(TafsirEdition edition) async {
     setState(() {
       _selected = edition;
-      _tafsirFuture = TafsirApiService.getSurahTafsir(edition.identifier, widget.surahNumber);
+      _loadingTafsirOnly = true;
     });
+    try {
+      final tafsirList = await TafsirApiService.getSurahTafsir(
+        edition.identifier,
+        widget.surahNumber,
+        _ayahs.length,
+      );
+      if (!mounted) return;
+      setState(() {
+        _tafsirMap = {for (final t in tafsirList) t.numberInSurah: t.text};
+        _loadingTafsirOnly = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _loadingTafsirOnly = false);
+    }
   }
 
   @override
@@ -98,61 +130,42 @@ class _TafsirDetailScreenState extends State<TafsirDetailScreen> {
                 ),
               ),
             Expanded(
-              child: _loadingEditions
+              child: _loading
                   ? const Center(child: CircularProgressIndicator(color: AppColors.gold))
-                  : _errorMessage != null
+                  : _errorMessage != null && _ayahs.isEmpty
                       ? Center(
                           child: Padding(
                             padding: const EdgeInsets.all(24),
                             child: Text(_errorMessage!, textAlign: TextAlign.center, style: AppTextStyles.bodySecondary),
                           ),
                         )
-                      : FutureBuilder(
-                          future: Future.wait([_ayahsFuture!, _tafsirFuture!]),
-                          builder: (context, AsyncSnapshot<List<dynamic>> snapshot) {
-                            if (snapshot.connectionState != ConnectionState.done) {
-                              return const Center(child: CircularProgressIndicator(color: AppColors.gold));
-                            }
-                            if (snapshot.hasError || !snapshot.hasData) {
-                              return Center(
-                                child: Text('تعذّر تحميل التفسير لهذه السورة', style: AppTextStyles.bodySecondary),
-                              );
-                            }
-
-                            final ayahs = snapshot.data![0] as List<Ayah>;
-                            final tafsirList = snapshot.data![1] as List<TafsirAyah>;
-                            final tafsirMap = {for (final t in tafsirList) t.numberInSurah: t.text};
-
-                            return ListView.separated(
+                      : Stack(
+                          children: [
+                            ListView.separated(
                               padding: const EdgeInsets.all(16),
-                              itemCount: ayahs.length,
+                              itemCount: _ayahs.length,
                               separatorBuilder: (_, __) => const SizedBox(height: 12),
                               itemBuilder: (context, i) {
-                                final a = ayahs[i];
-                                final tafsirText = tafsirMap[a.numberInSurah] ?? '';
+                                final a = _ayahs[i];
+                                final tafsirText = _tafsirMap[a.numberInSurah] ?? '';
                                 return GlassCard(
                                   child: Directionality(
                                     textDirection: TextDirection.rtl,
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        Row(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Expanded(
-                                              child: Text(
-                                                a.text,
-                                                style: AppTextStyles.quranAyah.copyWith(fontSize: 19),
-                                                textAlign: TextAlign.right,
-                                              ),
-                                            ),
-                                          ],
+                                        Text(
+                                          a.text,
+                                          style: AppTextStyles.quranAyah.copyWith(fontSize: 19),
+                                          textAlign: TextAlign.right,
                                         ),
                                         const SizedBox(height: 8),
                                         Divider(color: AppColors.surfaceBorder.withOpacity(0.5), height: 1),
                                         const SizedBox(height: 8),
                                         Text(
-                                          tafsirText.isEmpty ? 'لا يتوفر تفسير لهذه الآية من هذا المصدر.' : tafsirText,
+                                          tafsirText.isEmpty
+                                              ? 'لا يتوفر تفسير لهذه الآية من هذا المصدر حاليًا.'
+                                              : tafsirText,
                                           style: AppTextStyles.bodySecondary,
                                         ),
                                       ],
@@ -160,8 +173,15 @@ class _TafsirDetailScreenState extends State<TafsirDetailScreen> {
                                   ),
                                 );
                               },
-                            );
-                          },
+                            ),
+                            if (_loadingTafsirOnly)
+                              Container(
+                                color: Colors.black54,
+                                child: const Center(
+                                  child: CircularProgressIndicator(color: AppColors.gold),
+                                ),
+                              ),
+                          ],
                         ),
             ),
           ],

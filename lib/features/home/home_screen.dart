@@ -135,6 +135,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       NotificationService.scheduleForToday(
                         state.times,
                         reminderMinutes: SettingsService.getReminderMinutes(),
+                        adhanVoiceId: SettingsService.getAdhanVoiceId(),
                       );
                     });
                   }

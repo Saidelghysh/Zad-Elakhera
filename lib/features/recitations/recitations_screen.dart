@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/widgets/glass_card.dart';
 import '../../core/widgets/gold_divider.dart';
+import 'hafla_link_model.dart';
 import 'models/reciter_model.dart';
 import 'services/recitations_api_service.dart';
 
@@ -97,10 +99,81 @@ class _RecitationsScreenState extends State<RecitationsScreen> {
                   const GoldDivider(width: 60),
                   const SizedBox(height: 14),
                   ...classic.map((r) => _ReciterTile(reciter: r, isClassic: true)),
+                  const SizedBox(height: 28),
                 ],
+                Row(
+                  children: [
+                    const Icon(Icons.link_rounded, color: AppColors.gold, size: 16),
+                    const SizedBox(width: 6),
+                    Text('حفلات وتسجيلات خارجية نادرة', style: AppTextStyles.h3),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'أجزاء وسور متفرقة من مناسبات قديمة (مو مصحف كامل) — روابط حقيقية على أرشيف الإنترنت',
+                  style: AppTextStyles.caption,
+                ),
+                const SizedBox(height: 10),
+                const GoldDivider(width: 60),
+                const SizedBox(height: 14),
+                ...haflaLinks.map((h) => _HaflaTile(link: h)),
               ],
             );
           },
+        ),
+      ),
+    );
+  }
+}
+
+class _HaflaTile extends StatelessWidget {
+  final HaflaLink link;
+  const _HaflaTile({required this.link});
+
+  Future<void> _open(BuildContext context) async {
+    final uri = Uri.parse(link.url);
+    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!launched && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تعذّر فتح الرابط، تأكد من وجود متصفح على جهازك.')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: GlassCard(
+        child: InkWell(
+          onTap: () => _open(context),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.navyCardAlt,
+                  border: Border.all(color: AppColors.gold.withOpacity(0.6)),
+                ),
+                child: const Icon(Icons.open_in_new_rounded, color: AppColors.gold, size: 18),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(link.sheikhName, style: AppTextStyles.h3.copyWith(color: AppColors.textPrimary)),
+                    const SizedBox(height: 2),
+                    Text(link.description, style: AppTextStyles.caption),
+                  ],
+                ),
+              ),
+              const Icon(Icons.arrow_outward_rounded, color: AppColors.textMuted, size: 18),
+            ],
+          ),
         ),
       ),
     );

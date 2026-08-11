@@ -24,9 +24,9 @@ jobs:
           echo "android.newDsl=false" >> android/gradle.properties
           echo "android.builtInKotlin=false" >> android/gradle.properties
 
-      - name: Add required Android permissions (location, internet, notifications)
+      - name: Add required Android permissions (location, internet, notifications) + browser query
         run: |
-          sed -i 's#<manifest xmlns:android="http://schemas.android.com/apk/res/android">#<manifest xmlns:android="http://schemas.android.com/apk/res/android">\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>\n    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>\n    <uses-permission android:name="android.permission.INTERNET"/>\n    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>\n    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>\n    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>#' android/app/src/main/AndroidManifest.xml
+          sed -i 's#<manifest xmlns:android="http://schemas.android.com/apk/res/android">#<manifest xmlns:android="http://schemas.android.com/apk/res/android">\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>\n    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>\n    <uses-permission android:name="android.permission.INTERNET"/>\n    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>\n    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>\n    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>\n    <queries>\n        <intent>\n            <action android:name="android.intent.action.VIEW"/>\n            <category android:name="android.intent.category.BROWSABLE"/>\n            <data android:scheme="https"/>\n        </intent>\n    </queries>#' android/app/src/main/AndroidManifest.xml
           echo "----- AndroidManifest.xml result: -----"
           cat android/app/src/main/AndroidManifest.xml
 
@@ -43,6 +43,17 @@ jobs:
           cat android/app/build.gradle.kts
 
       - run: flutter pub get
+
+      - name: Download real azan audio files as Android notification sounds
+        run: |
+          mkdir -p android/app/src/main/res/raw
+          curl -L -o android/app/src/main/res/raw/azan_a9.mp3 "https://cdn.aladhan.com/audio/adhans/a9.mp3"
+          curl -L -o android/app/src/main/res/raw/azan_a4.mp3 "https://cdn.aladhan.com/audio/adhans/a4.mp3"
+          curl -L -o android/app/src/main/res/raw/azan_a11.mp3 "https://cdn.aladhan.com/audio/adhans/a11-mansour-al-zahrani.mp3"
+          curl -L -o android/app/src/main/res/raw/azan_a1.mp3 "https://cdn.aladhan.com/audio/adhans/a1.mp3"
+          curl -L -o android/app/src/main/res/raw/azan_a2.mp3 "https://cdn.aladhan.com/audio/adhans/a2.mp3"
+          echo "----- Downloaded azan files: -----"
+          ls -la android/app/src/main/res/raw/
 
       - run: flutter build apk --release
 

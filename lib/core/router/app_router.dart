@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../widgets/coming_soon_screen.dart';
 import '../../features/splash/splash_screen.dart';
 import '../../features/home/home_screen.dart';
 import '../../features/prayer_times/prayer_times_screen.dart';
@@ -17,6 +16,8 @@ import '../../features/recitations/reciter_surahs_screen.dart';
 import '../../features/recitations/models/reciter_model.dart';
 import '../../features/tafsir/tafsir_screen.dart';
 import '../../features/tafsir/tafsir_detail_screen.dart';
+import '../../features/tajweed/tajweed_screen.dart';
+import '../../features/learn_salah/learn_salah_screen.dart';
 
 final GoRouter appRouter = GoRouter(
   initialLocation: '/splash',
@@ -62,22 +63,8 @@ final GoRouter appRouter = GoRouter(
       },
     ),
 
-    // وحدات تحتاج محتوى تعليمي وسائطي — بنية جاهزة، بيانات تُوصل لاحقًا.
-    GoRoute(
-      path: '/tajweed',
-      builder: (context, state) => const ComingSoonScreen(
-        title: 'أحكام التجويد',
-        icon: Icons.record_voice_over_rounded,
-        note: 'دروس تفاعلية بأمثلة صوتية ومرئية — تحتاج محتوى تعليمي وملفات صوتية.',
-      ),
-    ),
-    GoRoute(
-      path: '/learn-salah',
-      builder: (context, state) => const ComingSoonScreen(
-        title: 'تعلم الصلاة',
-        icon: Icons.accessibility_new_rounded,
-        note: 'دليل خطوة بخطوة بالصور والصوت والفيديو — يحتاج أصول وسائط.',
-      ),
-    ),
+    // أحكام التجويد وتعلم الصلاة — محتوى تعليمي نصي حقيقي.
+    GoRoute(path: '/tajweed', builder: (context, state) => const TajweedScreen()),
+    GoRoute(path: '/learn-salah', builder: (context, state) => const LearnSalahScreen()),
   ],
 );

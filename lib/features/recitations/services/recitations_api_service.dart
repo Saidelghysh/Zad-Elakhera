@@ -28,7 +28,7 @@ class _CuratedEntry {
 class RecitationsApiService {
   static const String _baseUrl = 'https://www.mp3quran.net/api/v3';
   static const String _boxName = 'recitations_cache_box';
-  static const String _recitersKey = 'curated_reciters_v2';
+  static const String _recitersKey = 'curated_reciters_v3';
 
   static final Dio _dio = Dio(BaseOptions(
     baseUrl: _baseUrl,
@@ -65,6 +65,12 @@ class RecitationsApiService {
     _CuratedEntry(
       arabicName: 'مصطفى إسماعيل',
       displayName: 'مصطفى إسماعيل',
+      category: 'classic',
+      preferMujawwad: true,
+    ),
+    _CuratedEntry(
+      arabicName: 'محمود علي البنا',
+      displayName: 'محمود علي البنا',
       category: 'classic',
       preferMujawwad: true,
     ),

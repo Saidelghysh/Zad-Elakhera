@@ -88,7 +88,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
       await NotificationService.requestPermission();
       final location = await LocationService.getCurrentLocation();
       final times = PrayerTimesCalculationService.calculate(location);
-      await NotificationService.scheduleForToday(times, reminderMinutes: _reminderMinutes);
+      await NotificationService.scheduleForToday(
+        times,
+        reminderMinutes: _reminderMinutes,
+        adhanVoiceId: _adhanVoiceId,
+      );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('تم جدولة تنبيهات اليوم بنجاح')),
@@ -237,6 +241,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     onTap: () async {
                       await SettingsService.setAdhanVoiceId(voice.id);
                       setState(() => _adhanVoiceId = voice.id);
+                      _rescheduleNotifications();
                     },
                     leading: Icon(
                       selected ? Icons.radio_button_checked_rounded : Icons.radio_button_off_rounded,
