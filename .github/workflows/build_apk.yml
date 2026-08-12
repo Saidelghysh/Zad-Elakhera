@@ -42,6 +42,25 @@ jobs:
           echo "----- app/build.gradle.kts result: -----"
           cat android/app/build.gradle.kts
 
+      - name: Add ProGuard rules to fix flutter_local_notifications release-mode crash
+        run: |
+          cat > android/app/proguard-rules.pro << 'PROGUARD_EOF'
+          # يمنع R8 من حذف معلومات النوع اللي تحتاجها مكتبة Gson الداخلية
+          # عند تحميل الإشعارات المجدولة، وهذا سبب كراش معروف بمكتبة
+          # flutter_local_notifications في وضع Release تحديدًا.
+          -keep class com.google.gson.reflect.TypeToken
+          -keep class * extends com.google.gson.reflect.TypeToken
+          -keep public class * implements java.lang.reflect.Type
+          -keep class com.dexterous.** { *; }
+          -dontwarn com.google.gson.**
+          PROGUARD_EOF
+
+          if ! grep -q "proguardFiles" android/app/build.gradle.kts; then
+            sed -i -E '/^[[:space:]]*release[[:space:]]*\{/a\            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")' android/app/build.gradle.kts
+          fi
+          echo "----- app/build.gradle.kts (release block) result: -----"
+          cat android/app/build.gradle.kts
+
       - run: flutter pub get
 
       - name: Download real azan audio files as Android notification sounds

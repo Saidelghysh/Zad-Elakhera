@@ -7,33 +7,40 @@ import '../prayer_times/models/prayer_time_model.dart';
 /// بالإعدادات) + تنبيه "اقتربت صلاة ..." قبل الوقت بعدة دقائق (بصوت تنبيه
 /// عادي). تستخدم flutter_local_notifications + timezone.
 ///
-/// ملاحظة: الجدولة تغطي أوقات اليوم الحالي فقط، وتُعاد تلقائيًا كل مرة
-/// يُحسب فيها جدول الصلاة من جديد (عند فتح التطبيق)، لذا يُفضّل فتح
-/// التطبيق يوميًا للحفاظ على تحديث الجدول.
+/// كل استدعاء لمكوّن الإشعارات الأصلي (Android) محاط بمعالجة أخطاء كاملة —
+/// ميزة الإشعارات إضافية وما ينبغي أي خلل فيها يوقف التطبيق كامل.
 class NotificationService {
   static final FlutterLocalNotificationsPlugin _plugin = FlutterLocalNotificationsPlugin();
   static bool _initialized = false;
 
   static Future<void> init() async {
     if (_initialized) return;
-    tz_data.initializeTimeZones();
     try {
-      tz.setLocalLocation(tz.getLocation(DateTime.now().timeZoneName));
-    } catch (_) {
-      // لو ما قدر يحدد المنطقة الزمنية بالاسم، يبقى على UTC كخيار آمن.
-    }
+      tz_data.initializeTimeZones();
+      try {
+        tz.setLocalLocation(tz.getLocation(DateTime.now().timeZoneName));
+      } catch (_) {
+        // لو ما قدر يحدد المنطقة الزمنية بالاسم، يبقى على UTC كخيار آمن.
+      }
 
-    const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const initSettings = InitializationSettings(android: androidInit);
-    await _plugin.initialize(initSettings);
-    _initialized = true;
+      const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
+      const initSettings = InitializationSettings(android: androidInit);
+      await _plugin.initialize(initSettings);
+      _initialized = true;
+    } catch (_) {
+      // لو فشلت التهيئة لأي سبب، نتجاهل بصمت — الإشعارات ميزة إضافية.
+    }
   }
 
   static Future<bool> requestPermission() async {
-    final androidPlugin =
-        _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
-    final granted = await androidPlugin?.requestNotificationsPermission();
-    return granted ?? false;
+    try {
+      final androidPlugin =
+          _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+      final granted = await androidPlugin?.requestNotificationsPermission();
+      return granted ?? false;
+    } catch (_) {
+      return false;
+    }
   }
 
   /// يرسل إشعار تجريبي بصوت الأذان المختار خلال ١٠ ثوانٍ — للتأكد الفوري
@@ -59,7 +66,14 @@ class NotificationService {
     required String adhanVoiceId,
   }) async {
     await init();
-    await _plugin.cancelAll();
+    if (!_initialized) return;
+
+    try {
+      await _plugin.cancelAll();
+    } catch (_) {
+      // لو فشل المسح (خطأ معروف بالمكتبة أحيانًا)، نكمل الجدولة الجديدة
+      // فوقها بدل ما نوقف كل شي — الإشعارات القديمة هتُستبدل بنفس المعرّفات.
+    }
 
     final entries = times.asList().where((e) => e.name != 'الشروق');
     int id = 0;
@@ -99,25 +113,25 @@ class NotificationService {
     required DateTime time,
     required String? adhanVoiceId,
   }) async {
-    // نستخدم قناة مختلفة لكل صوت أذان مختار (Android يقفل صوت القناة عند
-    // إنشائها لأول مرة ولا يقبل تغييره لاحقًا لنفس المعرّف)، بحيث لما
-    // يغيّر المستخدم صوت الأذان بالإعدادات، تُنشأ قناة جديدة بالصوت الجديد.
-    final channelId = adhanVoiceId != null ? 'prayer_azan_channel_$adhanVoiceId' : 'prayer_reminder_channel';
-    final channelName = adhanVoiceId != null ? 'أذان الصلاة' : 'تذكير قبل الصلاة';
-
-    final androidDetails = AndroidNotificationDetails(
-      channelId,
-      channelName,
-      channelDescription: adhanVoiceId != null ? 'إشعار دخول وقت الصلاة بصوت الأذان' : 'تنبيه قبل دخول وقت الصلاة',
-      importance: Importance.high,
-      priority: Priority.high,
-      sound: adhanVoiceId != null ? RawResourceAndroidNotificationSound('azan_$adhanVoiceId') : null,
-      playSound: true,
-      audioAttributesUsage: AudioAttributesUsage.alarm,
-    );
-    final details = NotificationDetails(android: androidDetails);
-
     try {
+      // نستخدم قناة مختلفة لكل صوت أذان مختار (Android يقفل صوت القناة عند
+      // إنشائها لأول مرة ولا يقبل تغييره لاحقًا لنفس المعرّف)، بحيث لما
+      // يغيّر المستخدم صوت الأذان بالإعدادات، تُنشأ قناة جديدة بالصوت الجديد.
+      final channelId = adhanVoiceId != null ? 'prayer_azan_channel_$adhanVoiceId' : 'prayer_reminder_channel';
+      final channelName = adhanVoiceId != null ? 'أذان الصلاة' : 'تذكير قبل الصلاة';
+
+      final androidDetails = AndroidNotificationDetails(
+        channelId,
+        channelName,
+        channelDescription: adhanVoiceId != null ? 'إشعار دخول وقت الصلاة بصوت الأذان' : 'تنبيه قبل دخول وقت الصلاة',
+        importance: Importance.high,
+        priority: Priority.high,
+        sound: adhanVoiceId != null ? RawResourceAndroidNotificationSound('azan_$adhanVoiceId') : null,
+        playSound: true,
+        audioAttributesUsage: AudioAttributesUsage.alarm,
+      );
+      final details = NotificationDetails(android: androidDetails);
+
       await _plugin.zonedSchedule(
         id,
         title,
@@ -128,12 +142,17 @@ class NotificationService {
         uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
       );
     } catch (_) {
-      // لو فشلت الجدولة الدقيقة لأي سبب، نتجاهل هذا الإشعار بدل ما نكسر التطبيق.
+      // لو فشلت جدولة إشعار واحد لأي سبب، نتجاهله بدل ما نكسر التطبيق.
     }
   }
 
   static Future<void> cancelAll() async {
     await init();
-    await _plugin.cancelAll();
+    if (!_initialized) return;
+    try {
+      await _plugin.cancelAll();
+    } catch (_) {
+      // نتجاهل بصمت.
+    }
   }
 }
