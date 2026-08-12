@@ -70,11 +70,28 @@ class _MenuTile extends StatelessWidget {
             width: isSpecial ? 1 : 0.6,
           ),
         ),
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(item.icon, color: AppColors.gold, size: 24),
+            Container(
+              width: 46,
+              height: 46,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.navyCardAlt,
+                border: Border.all(color: AppColors.gold.withOpacity(0.55), width: 0.8),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.gold.withOpacity(0.15),
+                    blurRadius: 10,
+                    spreadRadius: 1,
+                  ),
+                ],
+              ),
+              child: Icon(item.icon, color: AppColors.gold, size: 22),
+            ),
             const SizedBox(height: 8),
             Text(
               item.label,

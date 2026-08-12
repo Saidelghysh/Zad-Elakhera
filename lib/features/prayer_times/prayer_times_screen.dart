@@ -4,6 +4,7 @@ import 'package:geolocator/geolocator.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/widgets/glass_card.dart';
+import '../../core/widgets/mosque_silhouette_background.dart';
 import 'models/prayer_time_model.dart';
 import 'providers/prayer_times_provider.dart';
 
@@ -122,17 +123,22 @@ class _PrayerTimesBodyState extends State<_PrayerTimesBody> {
               ),
             ),
           ),
-        GlassCard(
-          glow: true,
-          child: Column(
-            children: [
-              Text('الصلاة القادمة', style: AppTextStyles.caption),
-              const SizedBox(height: 4),
-              Text(nextName, style: AppTextStyles.h1.copyWith(color: AppColors.gold)),
-              const SizedBox(height: 4),
-              Text(_fmt(remaining), style: AppTextStyles.counterLarge),
-            ],
-          ),
+        Stack(
+          children: [
+            const MosqueSilhouetteBackground(height: 120, opacity: 0.25),
+            GlassCard(
+              glow: true,
+              child: Column(
+                children: [
+                  Text('الصلاة القادمة', style: AppTextStyles.caption),
+                  const SizedBox(height: 4),
+                  Text(nextName, style: AppTextStyles.h1.copyWith(color: AppColors.gold)),
+                  const SizedBox(height: 4),
+                  Text(_fmt(remaining), style: AppTextStyles.counterLarge),
+                ],
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 16),
         GlassCard(

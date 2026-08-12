@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/glass_card.dart';
+import '../../../core/widgets/mosque_silhouette_background.dart';
 
 /// بطاقة البطل في الشاشة الرئيسية: ترحيب + اسم الصلاة القادمة + عداد تنازلي.
 /// تستقبل بيانات الصلاة القادمة من [PrayerTimesProvider] (يُوصَل لاحقًا ببيانات حقيقية).
@@ -63,29 +64,44 @@ class _PrayerHeroCardState extends State<PrayerHeroCard> {
 
   @override
   Widget build(BuildContext context) {
-    return GlassCard(
-      glow: true,
-      borderColor: AppColors.gold.withOpacity(0.5),
-      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 18),
-      child: Column(
-        children: [
-          Text('السلام عليكم', style: AppTextStyles.h3.copyWith(fontSize: 17)),
-          const SizedBox(height: 6),
-          Text(
-            'نسأل الله أن يتقبل منا ومنكم صالح الأعمال',
-            textAlign: TextAlign.center,
-            style: AppTextStyles.bodySecondary,
+    return Stack(
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            gradient: RadialGradient(
+              center: Alignment.topCenter,
+              radius: 1.4,
+              colors: [AppColors.gold.withOpacity(0.10), Colors.transparent],
+            ),
           ),
-          const SizedBox(height: 16),
-          Divider(color: AppColors.surfaceBorder.withOpacity(0.6), height: 1),
-          const SizedBox(height: 14),
-          Text('الصلاة القادمة', style: AppTextStyles.caption),
-          const SizedBox(height: 4),
-          Text(widget.nextPrayerName, style: AppTextStyles.h1.copyWith(color: AppColors.gold)),
-          const SizedBox(height: 6),
-          Text(_fmt(_remaining), style: AppTextStyles.counterLarge),
-        ],
-      ),
+          child: const MosqueSilhouetteBackground(height: 150, opacity: 0.28),
+        ),
+        GlassCard(
+          glow: true,
+          borderColor: AppColors.gold.withOpacity(0.5),
+          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 18),
+          child: Column(
+            children: [
+              Text('السلام عليكم', style: AppTextStyles.h3.copyWith(fontSize: 17)),
+              const SizedBox(height: 6),
+              Text(
+                'نسأل الله أن يتقبل منا ومنكم صالح الأعمال',
+                textAlign: TextAlign.center,
+                style: AppTextStyles.bodySecondary,
+              ),
+              const SizedBox(height: 16),
+              Divider(color: AppColors.surfaceBorder.withOpacity(0.6), height: 1),
+              const SizedBox(height: 14),
+              Text('الصلاة القادمة', style: AppTextStyles.caption),
+              const SizedBox(height: 4),
+              Text(widget.nextPrayerName, style: AppTextStyles.h1.copyWith(color: AppColors.gold)),
+              const SizedBox(height: 6),
+              Text(_fmt(_remaining), style: AppTextStyles.counterLarge),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
