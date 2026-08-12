@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/widgets/glass_card.dart';
@@ -130,14 +129,8 @@ class _HaflaTile extends StatelessWidget {
   final HaflaLink link;
   const _HaflaTile({required this.link});
 
-  Future<void> _open(BuildContext context) async {
-    final uri = Uri.parse(link.url);
-    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
-    if (!launched && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تعذّر فتح الرابط، تأكد من وجود متصفح على جهازك.')),
-      );
-    }
+  void _open(BuildContext context) {
+    context.push('/recitations/hafla', extra: link);
   }
 
   @override

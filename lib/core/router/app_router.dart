@@ -13,6 +13,8 @@ import '../../features/quran/surah_detail_screen.dart';
 import '../../features/quran/models/surah_model.dart';
 import '../../features/recitations/recitations_screen.dart';
 import '../../features/recitations/reciter_surahs_screen.dart';
+import '../../features/recitations/hafla_tracks_screen.dart';
+import '../../features/recitations/hafla_link_model.dart';
 import '../../features/recitations/models/reciter_model.dart';
 import '../../features/tafsir/tafsir_screen.dart';
 import '../../features/tafsir/tafsir_detail_screen.dart';
@@ -44,6 +46,13 @@ final GoRouter appRouter = GoRouter(
 
     // التلاوات — تشغيل صوتي حقيقي (mp3quran.net) لأربعة قراء مشهورين.
     GoRoute(path: '/recitations', builder: (context, state) => const RecitationsScreen()),
+    GoRoute(
+      path: '/recitations/hafla',
+      builder: (context, state) {
+        final link = state.extra as HaflaLink;
+        return HaflaTracksScreen(link: link);
+      },
+    ),
     GoRoute(
       path: '/recitations/:id',
       builder: (context, state) {

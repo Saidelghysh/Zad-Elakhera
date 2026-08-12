@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
@@ -17,7 +18,7 @@ String _arabicDigits(int number) {
 }
 
 /// شاشة قراءة سورة كاملة — نص عثماني قياسي، بتصميم "صفحة مصحف" فاخر:
-/// عنوان مزخرف، بسملة، وأرقام آيات بالخط العربي التقليدي.
+/// عنوان مزخرف، بسملة، شريط تقدّم القراءة، وحفظ آخر موضع تلقائيًا.
 class SurahDetailScreen extends StatefulWidget {
   final int surahNumber;
   final SurahInfo? surahInfo;
@@ -30,12 +31,38 @@ class SurahDetailScreen extends StatefulWidget {
 
 class _SurahDetailScreenState extends State<SurahDetailScreen> {
   late Future<List<Ayah>> _future;
+  final ScrollController _scrollController = ScrollController();
   double _fontSize = 22;
+  double _readProgress = 0;
+  List<Ayah> _loadedAyahs = [];
 
   @override
   void initState() {
     super.initState();
     _future = QuranApiService.getSurahAyahs(widget.surahNumber);
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _saveLastRead();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients || _scrollController.position.maxScrollExtent == 0) return;
+    final progress = (_scrollController.offset / _scrollController.position.maxScrollExtent).clamp(0.0, 1.0);
+    if ((progress - _readProgress).abs() > 0.01) {
+      setState(() => _readProgress = progress);
+    }
+  }
+
+  void _saveLastRead() {
+    if (_loadedAyahs.isEmpty) return;
+    final approxIndex = (_readProgress * (_loadedAyahs.length - 1)).round().clamp(0, _loadedAyahs.length - 1);
+    QuranApiService.saveLastRead(widget.surahNumber, _loadedAyahs[approxIndex].numberInSurah);
   }
 
   void _retry() => setState(() => _future = QuranApiService.getSurahAyahs(widget.surahNumber));
@@ -63,6 +90,15 @@ class _SurahDetailScreenState extends State<SurahDetailScreen> {
             onPressed: () => setState(() => _fontSize = (_fontSize + 2).clamp(16, 34)),
           ),
         ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(3),
+          child: LinearProgressIndicator(
+            value: _readProgress == 0 ? null : _readProgress,
+            minHeight: 3,
+            backgroundColor: AppColors.surfaceBorder.withOpacity(0.3),
+            valueColor: const AlwaysStoppedAnimation(AppColors.gold),
+          ),
+        ),
       ),
       body: SafeArea(
         child: FutureBuilder<List<Ayah>>(
@@ -101,13 +137,17 @@ class _SurahDetailScreenState extends State<SurahDetailScreen> {
             }
 
             final ayahs = snapshot.data!;
+            _loadedAyahs = ayahs;
             return SingleChildScrollView(
+              controller: _scrollController,
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
               child: Column(
                 children: [
-                  // عنوان السورة المزخرف
+                  // عنوان السورة المزخرف، بإطار زخرفي علوي وسفلي بسيط
                   Column(
                     children: [
+                      const _CornerOrnament(),
+                      const SizedBox(height: 6),
                       Text(
                         info?.name ?? title,
                         style: AppTextStyles.h1.copyWith(color: AppColors.gold, fontSize: 26),
@@ -141,6 +181,7 @@ class _SurahDetailScreenState extends State<SurahDetailScreen> {
                   GlassCard(
                     padding: const EdgeInsets.all(18),
                     borderColor: AppColors.gold.withOpacity(0.35),
+                    glow: true,
                     child: Directionality(
                       textDirection: TextDirection.rtl,
                       child: Text.rich(
@@ -182,6 +223,8 @@ class _SurahDetailScreenState extends State<SurahDetailScreen> {
                       ),
                     ),
                   ),
+                  const SizedBox(height: 16),
+                  const _CornerOrnament(),
                 ],
               ),
             );
@@ -190,4 +233,52 @@ class _SurahDetailScreenState extends State<SurahDetailScreen> {
       ),
     );
   }
+}
+
+/// زخرفة صغيرة (نجمة إسلامية مبسطة) تُستخدم أعلى وأسفل صفحة القراءة —
+/// لمسة فخامة بسيطة بدون أي اعتماد على صور خارجية.
+class _CornerOrnament extends StatelessWidget {
+  const _CornerOrnament();
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 28,
+      height: 28,
+      child: CustomPaint(painter: _StarPainter()),
+    );
+  }
+}
+
+class _StarPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = AppColors.gold.withOpacity(0.6)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.2;
+
+    final center = size.center(Offset.zero);
+    final radius = size.width / 2;
+    const points = 8;
+    final path = Path();
+
+    for (int i = 0; i < points * 2; i++) {
+      final isOuter = i.isEven;
+      final r = isOuter ? radius : radius * 0.45;
+      final angle = (i * pi / points) - (pi / 2);
+      final x = center.dx + r * cos(angle);
+      final y = center.dy + r * sin(angle);
+      if (i == 0) {
+        path.moveTo(x, y);
+      } else {
+        path.lineTo(x, y);
+      }
+    }
+    path.close();
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

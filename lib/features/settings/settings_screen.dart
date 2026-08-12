@@ -33,6 +33,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late bool _athanNotifications;
   late String _adhanVoiceId;
   late int _reminderMinutes;
+  late bool _openingDuaAudio;
 
   final AudioPlayer _previewPlayer = AudioPlayer();
   String? _playingVoiceId;
@@ -45,6 +46,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _athanNotifications = SettingsService.getAthanNotificationsEnabled();
     _adhanVoiceId = SettingsService.getAdhanVoiceId();
     _reminderMinutes = SettingsService.getReminderMinutes();
+    _openingDuaAudio = SettingsService.getOpeningDuaAudioEnabled();
   }
 
   @override
@@ -221,6 +223,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         );
                       }).toList(),
                     ),
+                    const SizedBox(height: 14),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: () async {
+                          await NotificationService.sendTestNotification(_adhanVoiceId);
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('راقب شاشة جوالك خلال ١٠ ثوانٍ...')),
+                            );
+                          }
+                        },
+                        icon: const Icon(Icons.notifications_active_outlined),
+                        label: const Text('اختبار الإشعار الآن'),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: AppColors.gold, width: 0.7),
+                          foregroundColor: AppColors.gold,
+                        ),
+                      ),
+                    ),
                   ],
                 ],
               ),
@@ -257,6 +279,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                   );
                 }).toList(),
+              ),
+            ),
+            const SizedBox(height: 24),
+            _SectionTitle('صوت الفتح'),
+            const SizedBox(height: 10),
+            GlassCard(
+              child: SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                activeThumbColor: AppColors.gold,
+                title: Text('تشغيل دعاء الوالدين عند فتح التطبيق', style: AppTextStyles.body),
+                subtitle: Text(
+                  '"رب ارحمهما كما ربياني صغيرًا" (سورة الإسراء ٢٤) بصوت العفاسي.',
+                  style: AppTextStyles.caption,
+                ),
+                value: _openingDuaAudio,
+                onChanged: (value) async {
+                  await SettingsService.setOpeningDuaAudioEnabled(value);
+                  setState(() => _openingDuaAudio = value);
+                },
               ),
             ),
             const SizedBox(height: 24),

@@ -9,6 +9,7 @@ class SettingsService {
   static const String athanNotifKey = 'athan_notifications_enabled';
   static const String adhanVoiceKey = 'adhan_voice_id';
   static const String reminderMinutesKey = 'reminder_minutes_before';
+  static const String openingDuaAudioKey = 'opening_dua_audio_enabled';
 
   static Box get _box => Hive.box(boxName);
 
@@ -48,5 +49,12 @@ class SettingsService {
 
   static Future<void> setReminderMinutes(int minutes) async {
     await _box.put(reminderMinutesKey, minutes);
+  }
+
+  static bool getOpeningDuaAudioEnabled() =>
+      _box.get(openingDuaAudioKey, defaultValue: true) as bool;
+
+  static Future<void> setOpeningDuaAudioEnabled(bool value) async {
+    await _box.put(openingDuaAudioKey, value);
   }
 }

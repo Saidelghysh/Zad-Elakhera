@@ -7,35 +7,37 @@
 class HaflaLink {
   final String sheikhName;
   final String description;
-  final String url;
+  final String identifier; // معرّف العنصر على archive.org (يُستخدم لجلب الملفات الحقيقية)
 
-  const HaflaLink({required this.sheikhName, required this.description, required this.url});
+  const HaflaLink({required this.sheikhName, required this.description, required this.identifier});
+
+  String get pageUrl => 'https://archive.org/details/$identifier';
 }
 
 const List<HaflaLink> haflaLinks = [
   HaflaLink(
     sheikhName: 'محمد صديق المنشاوي',
     description: 'الحفلات والتسجيلات الخارجية — ٧٣ حفلة وتلاوة خاشعة',
-    url: 'https://archive.org/details/Tasjilat-Mojawada_Kharijia_Mohamed-siddiq-al-minshawi_uP_bY_mUSLEm',
+    identifier: 'Tasjilat-Mojawada_Kharijia_Mohamed-siddiq-al-minshawi_uP_bY_mUSLEm',
   ),
   HaflaLink(
     sheikhName: 'عبدالباسط عبدالصمد',
     description: 'التسجيلات الخارجية النادرة — ١٠٢ تلاوة',
-    url: 'https://archive.org/details/Abdel_Baset_Abd-Samad_TilawaT-Nadira_uP_bY_mUSLEm',
+    identifier: 'Abdel_Baset_Abd-Samad_TilawaT-Nadira_uP_bY_mUSLEm',
   ),
   HaflaLink(
     sheikhName: 'محمد الليثي',
     description: 'تسجيلات خارجية ونادرة بجودة عالية',
-    url: 'https://archive.org/details/mohammad.allythy.mogawwad.uP.bY.ReDa.MoHamMeD',
+    identifier: 'mohammad.allythy.mogawwad.uP.bY.ReDa.MoHamMeD',
   ),
   HaflaLink(
     sheikhName: 'محمود علي البنا',
     description: '٣٥٩ حفلة مجودة ونادرة بجودة عالية',
-    url: 'https://archive.org/details/Mahmoud.Ali.Al.Banna.7flat.uP.bY.ReDa.MoHamMeD',
+    identifier: 'Mahmoud.Ali.Al.Banna.7flat.uP.bY.ReDa.MoHamMeD',
   ),
   HaflaLink(
     sheikhName: 'شعبان الصياد',
     description: 'ضمن تجميعة حفلات مجودة مشتركة (مع المنشاوي والحصري)',
-    url: 'https://archive.org/details/Tilawat_wa_Hafalat_Mojawada_uP_bY_mUSLEm',
+    identifier: 'Tilawat_wa_Hafalat_Mojawada_uP_bY_mUSLEm',
   ),
 ];

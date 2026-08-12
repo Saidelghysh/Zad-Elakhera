@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import 'tasbeeh_service.dart';
@@ -20,31 +21,25 @@ class TasbeehScreen extends StatefulWidget {
 }
 
 class _TasbeehScreenState extends State<TasbeehScreen> {
-  int _count = 0;
   int _target = 33;
   int _dhikrIndex = 0;
 
   @override
   void initState() {
     super.initState();
-    _count = TasbeehService.getCount();
     _target = TasbeehService.getTarget();
   }
 
   Future<void> _tap() async {
     final newCount = await TasbeehService.increment();
-    setState(() => _count = newCount);
-
     HapticFeedback.lightImpact();
-
-    if (_count % _target == 0) {
+    if (newCount % _target == 0) {
       HapticFeedback.mediumImpact();
     }
   }
 
   Future<void> _reset() async {
     await TasbeehService.reset();
-    setState(() => _count = 0);
   }
 
   void _pickTarget() {
@@ -80,8 +75,6 @@ class _TasbeehScreenState extends State<TasbeehScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final progress = (_count % _target) / _target;
-
     return Scaffold(
       backgroundColor: AppColors.royalBlack,
       appBar: AppBar(
@@ -113,46 +106,56 @@ class _TasbeehScreenState extends State<TasbeehScreen> {
               }),
             ),
             const Spacer(),
-            GestureDetector(
-              onTap: _tap,
-              child: SizedBox(
-                width: 220,
-                height: 220,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    SizedBox(
-                      width: 220,
-                      height: 220,
-                      child: CircularProgressIndicator(
-                        value: progress == 0 ? 1 : progress,
-                        strokeWidth: 6,
-                        backgroundColor: AppColors.surfaceBorder,
-                        valueColor: const AlwaysStoppedAnimation(AppColors.gold),
-                      ),
-                    ),
-                    Container(
-                      width: 180,
-                      height: 180,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: AppColors.navyCard,
-                        border: Border.all(color: AppColors.gold.withOpacity(0.6)),
-                      ),
-                      child: Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text('$_count', style: AppTextStyles.counterLarge.copyWith(fontSize: 40)),
-                            const SizedBox(height: 4),
-                            Text(_adhkarChoices[_dhikrIndex], style: AppTextStyles.bodySecondary),
-                          ],
+            // نستمع مباشرة لصندوق التخزين (Hive) بدل قيمة محفوظة بذاكرة الشاشة،
+            // بحيث لو تغيّر العداد من مكان ثاني (زر التصفير بالإعدادات مثلًا)
+            // ينعكس فورًا هنا بدون ما نحتاج نرجع لهذي الشاشة من جديد.
+            ValueListenableBuilder<Box>(
+              valueListenable: Hive.box(TasbeehService.boxName).listenable(),
+              builder: (context, box, _) {
+                final count = TasbeehService.getCount();
+                final progress = _target == 0 ? 0.0 : (count % _target) / _target;
+                return GestureDetector(
+                  onTap: _tap,
+                  child: SizedBox(
+                    width: 220,
+                    height: 220,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        SizedBox(
+                          width: 220,
+                          height: 220,
+                          child: CircularProgressIndicator(
+                            value: progress == 0 ? 1 : progress,
+                            strokeWidth: 6,
+                            backgroundColor: AppColors.surfaceBorder,
+                            valueColor: const AlwaysStoppedAnimation(AppColors.gold),
+                          ),
                         ),
-                      ),
+                        Container(
+                          width: 180,
+                          height: 180,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: AppColors.navyCard,
+                            border: Border.all(color: AppColors.gold.withOpacity(0.6)),
+                          ),
+                          child: Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text('$count', style: AppTextStyles.counterLarge.copyWith(fontSize: 40)),
+                                const SizedBox(height: 4),
+                                Text(_adhkarChoices[_dhikrIndex], style: AppTextStyles.bodySecondary),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              ),
+                  ),
+                );
+              },
             ),
             const SizedBox(height: 20),
             Text('الهدف: $_target', style: AppTextStyles.caption),

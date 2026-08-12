@@ -111,12 +111,59 @@ class _QuranScreenState extends State<QuranScreen> {
                               s.number.toString() == _query;
                         }).toList();
 
+                  final lastRead = QuranApiService.getLastRead();
+                  SurahInfo? lastReadSurah;
+                  if (lastRead != null) {
+                    try {
+                      lastReadSurah = all.firstWhere((s) => s.number == lastRead.$1);
+                    } catch (_) {
+                      lastReadSurah = null;
+                    }
+                  }
+
                   return ListView.separated(
                     padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
-                    itemCount: filtered.length,
+                    itemCount: filtered.length + (lastReadSurah != null && _query.isEmpty ? 1 : 0),
                     separatorBuilder: (_, __) => const SizedBox(height: 8),
                     itemBuilder: (context, i) {
-                      final s = filtered[i];
+                      if (lastReadSurah != null && _query.isEmpty) {
+                        if (i == 0) {
+                          return InkWell(
+                            borderRadius: BorderRadius.circular(16),
+                            onTap: () => context.push('/quran/${lastReadSurah!.number}', extra: lastReadSurah),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                              decoration: BoxDecoration(
+                                color: AppColors.navyCardAlt,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: AppColors.gold, width: 0.9),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.auto_stories_rounded, color: AppColors.gold, size: 22),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text('متابعة القراءة', style: AppTextStyles.h3),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          '${lastReadSurah!.name} — آية ${lastRead!.$2}',
+                                          style: AppTextStyles.caption,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const Icon(Icons.chevron_left_rounded, color: AppColors.gold),
+                                ],
+                              ),
+                            ),
+                          );
+                        }
+                      }
+                      final adjustedIndex = (lastReadSurah != null && _query.isEmpty) ? i - 1 : i;
+                      final s = filtered[adjustedIndex];
                       return GlassCard(
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                         child: InkWell(

@@ -36,6 +36,20 @@ class NotificationService {
     return granted ?? false;
   }
 
+  /// يرسل إشعار تجريبي بصوت الأذان المختار خلال ١٠ ثوانٍ — للتأكد الفوري
+  /// إن الإشعارات والصوت شغّالين فعليًا قبل ما تعتمد على الجدولة اليومية.
+  static Future<void> sendTestNotification(String adhanVoiceId) async {
+    await init();
+    await requestPermission();
+    await _scheduleOne(
+      id: 9999,
+      title: 'اختبار إشعار الأذان',
+      body: 'لو سمعت هذا وصوت الأذان، الإعداد شغّال تمام ✅',
+      time: DateTime.now().add(const Duration(seconds: 10)),
+      adhanVoiceId: adhanVoiceId,
+    );
+  }
+
   /// يجدول إشعارات اليوم الحالي: تنبيه قبل كل صلاة بـ [reminderMinutes] دقيقة
   /// (بصوت تنبيه عادي)، وإشعار عند دخول الوقت نفسه (بصوت أذان [adhanVoiceId]
   /// الحقيقي المختار بالإعدادات). يمسح أي جدولة سابقة أولًا لتفادي التكرار.
