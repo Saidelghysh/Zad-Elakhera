@@ -160,7 +160,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         currentIndex: _navIndex,
         onTap: (i) {
           setState(() => _navIndex = i);
-          if (i == 4) context.push('/settings');
+          if (i == 1) {
+            context.push('/library');
+          } else if (i == 4) {
+            context.push('/settings');
+          } else if (i == 2 || i == 3) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('هذي الميزة قريبًا بإذن الله')),
+            );
+          }
         },
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: 'الرئيسية'),

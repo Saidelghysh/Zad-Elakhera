@@ -20,6 +20,10 @@ import '../../features/tafsir/tafsir_screen.dart';
 import '../../features/tafsir/tafsir_detail_screen.dart';
 import '../../features/tajweed/tajweed_screen.dart';
 import '../../features/learn_salah/learn_salah_screen.dart';
+import '../../features/library/library_screen.dart';
+import '../../features/library/link_list_screen.dart';
+import '../../features/library/live_radio_screen.dart';
+import '../../features/recitations/ibtihalat_link_model.dart';
 
 final GoRouter appRouter = GoRouter(
   initialLocation: '/splash',
@@ -47,17 +51,34 @@ final GoRouter appRouter = GoRouter(
     // التلاوات — تشغيل صوتي حقيقي (mp3quran.net) لأربعة قراء مشهورين.
     GoRoute(path: '/recitations', builder: (context, state) => const RecitationsScreen()),
     GoRoute(
-      path: '/recitations/hafla',
-      builder: (context, state) {
-        final link = state.extra as HaflaLink;
-        return HaflaTracksScreen(link: link);
-      },
-    ),
-    GoRoute(
       path: '/recitations/:id',
       builder: (context, state) {
         final reciter = state.extra as Reciter;
         return ReciterSurahsScreen(reciter: reciter);
+      },
+    ),
+
+    // المكتبة — حفلات نادرة، ابتهالات، أمسيات دينية، بث مباشر.
+    GoRoute(path: '/library', builder: (context, state) => const LibraryScreen()),
+    GoRoute(
+      path: '/library/hafla',
+      builder: (context, state) => const LinkListScreen(title: 'حفلات وتسجيلات نادرة', links: haflaLinks),
+    ),
+    GoRoute(
+      path: '/library/ibtihalat',
+      builder: (context, state) => const LinkListScreen(title: 'الابتهالات', links: ibtihalatLinks),
+    ),
+    GoRoute(
+      path: '/library/evenings',
+      builder: (context, state) =>
+          const LinkListScreen(title: 'أمسيات دينية', links: religiousEveningsLinks),
+    ),
+    GoRoute(path: '/library/live-radio', builder: (context, state) => const LiveRadioScreen()),
+    GoRoute(
+      path: '/library/tracks',
+      builder: (context, state) {
+        final link = state.extra as HaflaLink;
+        return HaflaTracksScreen(link: link);
       },
     ),
 
