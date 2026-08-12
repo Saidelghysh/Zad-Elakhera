@@ -86,24 +86,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
       return;
     }
     try {
-      await NotificationService.init();
-      await NotificationService.requestPermission();
       final location = await LocationService.getCurrentLocation();
       final times = PrayerTimesCalculationService.calculate(location);
-      await NotificationService.scheduleForToday(
+      final result = await NotificationService.scheduleForToday(
         times,
         reminderMinutes: _reminderMinutes,
         adhanVoiceId: _adhanVoiceId,
       );
-      if (mounted) {
+      if (!mounted) return;
+
+      if (!result.permissionGranted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('تم جدولة تنبيهات اليوم بنجاح')),
+          SnackBar(content: Text(result.lastError ?? 'إذن الإشعارات مرفوض.'), duration: const Duration(seconds: 5)),
+        );
+      } else if (result.scheduledCount == 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('ما انجدول ولا إشعار — ${result.lastError ?? "سبب غير معروف"}'),
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('تم جدولة ${result.scheduledCount} إشعار لليوم بنجاح ✅')),
         );
       }
-    } catch (_) {
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('تعذّرت جدولة التنبيهات — تأكد من إذن الموقع والإشعارات')),
+          SnackBar(content: Text('تعذّرت جدولة التنبيهات: ${e.toString()}'), duration: const Duration(seconds: 5)),
         );
       }
     }
@@ -228,10 +239,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       width: double.infinity,
                       child: OutlinedButton.icon(
                         onPressed: () async {
-                          await NotificationService.sendTestNotification(_adhanVoiceId);
+                          final result = await NotificationService.sendTestNotification(_adhanVoiceId);
                           if (context.mounted) {
+                            final msg = result.scheduledCount > 0
+                                ? 'تم الجدولة ✅ راقب شاشة جوالك خلال ١٠ ثوانٍ...'
+                                : (result.lastError ?? 'تعذّر إرسال الإشعار التجريبي');
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('راقب شاشة جوالك خلال ١٠ ثوانٍ...')),
+                              SnackBar(content: Text(msg), duration: const Duration(seconds: 5)),
                             );
                           }
                         },
@@ -241,6 +255,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           side: const BorderSide(color: AppColors.gold, width: 0.7),
                           foregroundColor: AppColors.gold,
                         ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: TextButton.icon(
+                        onPressed: () async {
+                          final count = await NotificationService.getPendingCount();
+                          if (context.mounted) {
+                            final msg = count < 0
+                                ? 'تعذّر الفحص'
+                                : count == 0
+                                    ? 'لا يوجد أي إشعار مجدول حاليًا ⚠️'
+                                    : 'عدد الإشعارات المجدولة الآن: $count ✅';
+                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+                          }
+                        },
+                        icon: const Icon(Icons.fact_check_outlined, size: 18),
+                        label: Text('تحقق من الجدولة الحالية', style: AppTextStyles.caption),
                       ),
                     ),
                   ],

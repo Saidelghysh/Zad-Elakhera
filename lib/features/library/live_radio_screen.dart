@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import '../../core/theme/app_colors.dart';
@@ -7,12 +8,11 @@ import '../../core/widgets/mosque_silhouette_background.dart';
 
 /// شاشة البث المباشر لإذاعة القرآن الكريم من القاهرة.
 ///
-/// ⚠️ TODO: استبدل [_streamUrl] برابط البث الفعلي المباشر (Direct Stream URL،
-/// وليس رابط صفحة الإذاعة أو تطبيق موبايل) بمجرد توفره.
+/// نجلب رابط البث الفعلي وقت التشغيل من واجهة mp3quran.net الموثوقة (نفس
+/// مصدر التلاوات بالتطبيق) بدل ترميز رابط ثابت قد يتغيّر أو ينكسر —
+/// ندوّر على محطة "القاهرة" ضمن قائمة كل الإذاعات المتاحة.
 class LiveRadioScreen extends StatefulWidget {
   const LiveRadioScreen({super.key});
-
-  static const String _streamUrl = 'REPLACE_WITH_REAL_STREAM_URL';
 
   @override
   State<LiveRadioScreen> createState() => _LiveRadioScreenState();
@@ -20,14 +20,35 @@ class LiveRadioScreen extends StatefulWidget {
 
 class _LiveRadioScreenState extends State<LiveRadioScreen> {
   final AudioPlayer _player = AudioPlayer();
+  final Dio _dio = Dio();
+
   bool _connecting = false;
   bool _isLive = false;
   String? _error;
+  String? _streamUrl;
+  String _stationName = 'إذاعة القرآن الكريم';
 
   @override
   void dispose() {
     _player.dispose();
     super.dispose();
+  }
+
+  Future<String?> _findCairoStreamUrl() async {
+    final response = await _dio.get(
+      'https://www.mp3quran.net/api/v3/radios',
+      queryParameters: {'language': 'ar'},
+    );
+    final radios = response.data['radios'] as List;
+
+    final match = radios.firstWhere(
+      (r) => (r['name'] as String? ?? '').contains('القاهرة'),
+      orElse: () => null,
+    );
+    if (match == null) return null;
+
+    _stationName = match['name'] as String;
+    return match['url'] as String?;
   }
 
   Future<void> _toggle() async {
@@ -36,16 +57,23 @@ class _LiveRadioScreenState extends State<LiveRadioScreen> {
       setState(() => _isLive = false);
       return;
     }
-    if (LiveRadioScreen._streamUrl == 'REPLACE_WITH_REAL_STREAM_URL') {
-      setState(() => _error = 'رابط البث لسا ما انضاف. تواصل مع فريق التطوير لإكمال هذي الميزة.');
-      return;
-    }
+
     setState(() {
       _connecting = true;
       _error = null;
     });
+
     try {
-      await _player.setUrl(LiveRadioScreen._streamUrl);
+      _streamUrl ??= await _findCairoStreamUrl();
+      if (_streamUrl == null) {
+        setState(() {
+          _connecting = false;
+          _error = 'تعذّر إيجاد رابط البث حاليًا. حاول لاحقًا.';
+        });
+        return;
+      }
+
+      await _player.setUrl(_streamUrl!);
       await _player.play();
       setState(() {
         _isLive = true;
@@ -90,7 +118,7 @@ class _LiveRadioScreenState extends State<LiveRadioScreen> {
                       ],
                     ),
                   const SizedBox(height: 8),
-                  Text('إذاعة القرآن الكريم', style: AppTextStyles.h1.copyWith(color: AppColors.gold, fontSize: 22)),
+                  Text(_stationName, style: AppTextStyles.h1.copyWith(color: AppColors.gold, fontSize: 22), textAlign: TextAlign.center),
                   const SizedBox(height: 4),
                   Text('من القاهرة — على مدار الساعة', style: AppTextStyles.bodySecondary),
                   const SizedBox(height: 24),

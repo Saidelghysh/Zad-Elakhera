@@ -3,18 +3,29 @@ import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest_all.dart' as tz_data;
 import '../prayer_times/models/prayer_time_model.dart';
 
+/// نتيجة عملية الجدولة — تفاصيل حقيقية بدل نجاح/فشل صامت، عشان تقدر تعرف
+/// بالضبط وش صار (كم إشعار انجدول، وهل الإذن ممنوح، وآخر خطأ لو صار).
+class ScheduleResult {
+  final int scheduledCount;
+  final bool permissionGranted;
+  final String? lastError;
+
+  const ScheduleResult({
+    required this.scheduledCount,
+    required this.permissionGranted,
+    this.lastError,
+  });
+}
+
 /// خدمة جدولة إشعارات دخول وقت الصلاة (بصوت أذان حقيقي حسب الصوت المختار
 /// بالإعدادات) + تنبيه "اقتربت صلاة ..." قبل الوقت بعدة دقائق (بصوت تنبيه
 /// عادي). تستخدم flutter_local_notifications + timezone.
-///
-/// كل استدعاء لمكوّن الإشعارات الأصلي (Android) محاط بمعالجة أخطاء كاملة —
-/// ميزة الإشعارات إضافية وما ينبغي أي خلل فيها يوقف التطبيق كامل.
 class NotificationService {
   static final FlutterLocalNotificationsPlugin _plugin = FlutterLocalNotificationsPlugin();
   static bool _initialized = false;
 
-  static Future<void> init() async {
-    if (_initialized) return;
+  static Future<bool> init() async {
+    if (_initialized) return true;
     try {
       tz_data.initializeTimeZones();
       try {
@@ -27,8 +38,9 @@ class NotificationService {
       const initSettings = InitializationSettings(android: androidInit);
       await _plugin.initialize(initSettings);
       _initialized = true;
+      return true;
     } catch (_) {
-      // لو فشلت التهيئة لأي سبب، نتجاهل بصمت — الإشعارات ميزة إضافية.
+      return false;
     }
   }
 
@@ -36,6 +48,10 @@ class NotificationService {
     try {
       final androidPlugin =
           _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+      // أولًا نتحقق هل الإذن ممنوح أصلًا (بعض الأجهزة تمنحه تلقائيًا).
+      final alreadyGranted = await androidPlugin?.areNotificationsEnabled();
+      if (alreadyGranted == true) return true;
+
       final granted = await androidPlugin?.requestNotificationsPermission();
       return granted ?? false;
     } catch (_) {
@@ -43,70 +59,114 @@ class NotificationService {
     }
   }
 
-  /// يرسل إشعار تجريبي بصوت الأذان المختار خلال ١٠ ثوانٍ — للتأكد الفوري
-  /// إن الإشعارات والصوت شغّالين فعليًا قبل ما تعتمد على الجدولة اليومية.
-  static Future<void> sendTestNotification(String adhanVoiceId) async {
-    await init();
-    await requestPermission();
-    await _scheduleOne(
+  /// عدد الإشعارات المجدولة فعليًا حاليًا لدى نظام أندرويد — أداة تحقق
+  /// حقيقية بدل الاعتماد على افتراض إن الجدولة نجحت.
+  static Future<int> getPendingCount() async {
+    try {
+      final pending = await _plugin.pendingNotificationRequests();
+      return pending.length;
+    } catch (_) {
+      return -1; // -1 تعني تعذّر الفحص نفسه
+    }
+  }
+
+  /// يرسل إشعار تجريبي بصوت الأذان المختار خلال ١٠ ثوانٍ.
+  static Future<ScheduleResult> sendTestNotification(String adhanVoiceId) async {
+    final initOk = await init();
+    if (!initOk) {
+      return const ScheduleResult(scheduledCount: 0, permissionGranted: false, lastError: 'تعذّرت تهيئة نظام الإشعارات على هذا الجهاز.');
+    }
+    final granted = await requestPermission();
+    if (!granted) {
+      return const ScheduleResult(
+        scheduledCount: 0,
+        permissionGranted: false,
+        lastError: 'إذن الإشعارات مرفوض. فعّله يدويًا من إعدادات الجهاز → التطبيقات → زاد الآخرة → الإشعارات.',
+      );
+    }
+
+    final error = await _scheduleOne(
       id: 9999,
       title: 'اختبار إشعار الأذان',
       body: 'لو سمعت هذا وصوت الأذان، الإعداد شغّال تمام ✅',
       time: DateTime.now().add(const Duration(seconds: 10)),
       adhanVoiceId: adhanVoiceId,
     );
+
+    return ScheduleResult(scheduledCount: error == null ? 1 : 0, permissionGranted: true, lastError: error);
   }
 
-  /// يجدول إشعارات اليوم الحالي: تنبيه قبل كل صلاة بـ [reminderMinutes] دقيقة
-  /// (بصوت تنبيه عادي)، وإشعار عند دخول الوقت نفسه (بصوت أذان [adhanVoiceId]
-  /// الحقيقي المختار بالإعدادات). يمسح أي جدولة سابقة أولًا لتفادي التكرار.
-  static Future<void> scheduleForToday(
+  /// يجدول إشعارات اليوم الحالي، ويعيد نتيجة حقيقية (كم إشعار انجدول فعلًا).
+  static Future<ScheduleResult> scheduleForToday(
     DailyPrayerTimes times, {
     required int reminderMinutes,
     required String adhanVoiceId,
   }) async {
-    await init();
-    if (!_initialized) return;
+    final initOk = await init();
+    if (!initOk) {
+      return const ScheduleResult(scheduledCount: 0, permissionGranted: false, lastError: 'تعذّرت تهيئة نظام الإشعارات على هذا الجهاز.');
+    }
+
+    final granted = await requestPermission();
+    if (!granted) {
+      return const ScheduleResult(
+        scheduledCount: 0,
+        permissionGranted: false,
+        lastError: 'إذن الإشعارات مرفوض. فعّله يدويًا من إعدادات الجهاز → التطبيقات → زاد الآخرة → الإشعارات.',
+      );
+    }
 
     try {
       await _plugin.cancelAll();
     } catch (_) {
-      // لو فشل المسح (خطأ معروف بالمكتبة أحيانًا)، نكمل الجدولة الجديدة
-      // فوقها بدل ما نوقف كل شي — الإشعارات القديمة هتُستبدل بنفس المعرّفات.
+      // نكمل الجدولة الجديدة فوقها حتى لو فشل المسح.
     }
 
     final entries = times.asList().where((e) => e.name != 'الشروق');
     int id = 0;
+    int scheduled = 0;
+    String? lastError;
 
     for (final entry in entries) {
       final now = DateTime.now();
 
-      // إشعار "دخل وقت الصلاة" — بصوت الأذان الحقيقي المختار.
       if (entry.time.isAfter(now)) {
-        await _scheduleOne(
+        final err = await _scheduleOne(
           id: id++,
           title: 'حان الآن وقت صلاة ${entry.name}',
           body: 'زاد الآخرة — صلِّ في وقتها 🕌',
           time: entry.time,
           adhanVoiceId: adhanVoiceId,
         );
+        if (err == null) {
+          scheduled++;
+        } else {
+          lastError = err;
+        }
       }
 
-      // تنبيه "اقتربت صلاة ..." قبل الوقت — بصوت تنبيه عادي (مو الأذان كامل).
       final reminderTime = entry.time.subtract(Duration(minutes: reminderMinutes));
       if (reminderTime.isAfter(now)) {
-        await _scheduleOne(
+        final err = await _scheduleOne(
           id: id++,
           title: 'اقتربت صلاة ${entry.name}',
           body: 'باقي $reminderMinutes دقائق على أذان ${entry.name}',
           time: reminderTime,
           adhanVoiceId: null,
         );
+        if (err == null) {
+          scheduled++;
+        } else {
+          lastError = err;
+        }
       }
     }
+
+    return ScheduleResult(scheduledCount: scheduled, permissionGranted: true, lastError: lastError);
   }
 
-  static Future<void> _scheduleOne({
+  /// يجدول إشعار واحد، ويعيد null عند النجاح أو رسالة الخطأ عند الفشل.
+  static Future<String?> _scheduleOne({
     required int id,
     required String title,
     required String body,
@@ -114,9 +174,6 @@ class NotificationService {
     required String? adhanVoiceId,
   }) async {
     try {
-      // نستخدم قناة مختلفة لكل صوت أذان مختار (Android يقفل صوت القناة عند
-      // إنشائها لأول مرة ولا يقبل تغييره لاحقًا لنفس المعرّف)، بحيث لما
-      // يغيّر المستخدم صوت الأذان بالإعدادات، تُنشأ قناة جديدة بالصوت الجديد.
       final channelId = adhanVoiceId != null ? 'prayer_azan_channel_$adhanVoiceId' : 'prayer_reminder_channel';
       final channelName = adhanVoiceId != null ? 'أذان الصلاة' : 'تذكير قبل الصلاة';
 
@@ -141,8 +198,9 @@ class NotificationService {
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
         uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
       );
-    } catch (_) {
-      // لو فشلت جدولة إشعار واحد لأي سبب، نتجاهله بدل ما نكسر التطبيق.
+      return null;
+    } catch (e) {
+      return e.toString();
     }
   }
 
