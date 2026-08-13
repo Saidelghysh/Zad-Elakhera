@@ -65,14 +65,36 @@ jobs:
 
       - name: Download real azan audio files as Android notification sounds
         run: |
+          set -e
           mkdir -p android/app/src/main/res/raw
-          curl -L -o android/app/src/main/res/raw/azan_a9.mp3 "https://cdn.aladhan.com/audio/adhans/a9.mp3"
-          curl -L -o android/app/src/main/res/raw/azan_a4.mp3 "https://cdn.aladhan.com/audio/adhans/a4.mp3"
-          curl -L -o android/app/src/main/res/raw/azan_a11.mp3 "https://cdn.aladhan.com/audio/adhans/a11-mansour-al-zahrani.mp3"
-          curl -L -o android/app/src/main/res/raw/azan_a1.mp3 "https://cdn.aladhan.com/audio/adhans/a1.mp3"
-          curl -L -o android/app/src/main/res/raw/azan_a2.mp3 "https://cdn.aladhan.com/audio/adhans/a2.mp3"
+          curl -f -L -o android/app/src/main/res/raw/azan_a9.mp3 "https://cdn.aladhan.com/audio/adhans/a9.mp3"
+          curl -f -L -o android/app/src/main/res/raw/azan_a4.mp3 "https://cdn.aladhan.com/audio/adhans/a4.mp3"
+          curl -f -L -o android/app/src/main/res/raw/azan_a11.mp3 "https://cdn.aladhan.com/audio/adhans/a11-mansour-al-zahrani.mp3"
+          curl -f -L -o android/app/src/main/res/raw/azan_a1.mp3 "https://cdn.aladhan.com/audio/adhans/a1.mp3"
+          curl -f -L -o android/app/src/main/res/raw/azan_a2.mp3 "https://cdn.aladhan.com/audio/adhans/a2.mp3"
           echo "----- Downloaded azan files: -----"
           ls -la android/app/src/main/res/raw/
+          echo "----- Verifying file sizes (must be real audio, not error pages) -----"
+          for f in android/app/src/main/res/raw/azan_*.mp3; do
+            size=$(stat -c%s "$f")
+            echo "$f -> $size bytes"
+            if [ "$size" -lt 100000 ]; then
+              echo "❌ ERROR: $f is suspiciously small ($size bytes) - download likely failed or returned an error page instead of real audio."
+              exit 1
+            fi
+          done
+          echo "✅ All azan audio files downloaded successfully with valid sizes."
+
+      - name: Protect azan audio files from Android's resource shrinker
+        run: |
+          mkdir -p android/app/src/main/res/xml
+          cat > android/app/src/main/res/xml/keep.xml << 'KEEP_EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources xmlns:tools="http://schemas.android.com/tools"
+              tools:keep="@raw/azan_a9,@raw/azan_a4,@raw/azan_a11,@raw/azan_a1,@raw/azan_a2" />
+          KEEP_EOF
+          echo "----- res/xml/keep.xml result: -----"
+          cat android/app/src/main/res/xml/keep.xml
 
       - run: flutter build apk --release
 

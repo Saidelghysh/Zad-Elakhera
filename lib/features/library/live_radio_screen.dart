@@ -45,7 +45,12 @@ class _LiveRadioScreenState extends State<LiveRadioScreen> {
       (r) => (r['name'] as String? ?? '').contains('القاهرة'),
       orElse: () => null,
     );
-    if (match == null) return null;
+    if (match == null) {
+      // تشخيص: نعرض أول ٥ أسماء إذاعات فعلية موجودة بالمصدر، عشان نتأكد
+      // هل "القاهرة" موجودة بمصدرنا الحالي أصلًا بأي اسم قريب أو لا.
+      final sampleNames = radios.take(8).map((r) => r['name']).join('، ');
+      throw Exception('محطة القاهرة مو موجودة بهذا المصدر. محطات متاحة: $sampleNames');
+    }
 
     _stationName = match['name'] as String;
     return match['url'] as String?;
@@ -79,10 +84,10 @@ class _LiveRadioScreenState extends State<LiveRadioScreen> {
         _isLive = true;
         _connecting = false;
       });
-    } catch (_) {
+    } catch (e) {
       setState(() {
         _connecting = false;
-        _error = 'تعذّر الاتصال بالبث، تأكد من اتصالك بالإنترنت.';
+        _error = e.toString();
       });
     }
   }
