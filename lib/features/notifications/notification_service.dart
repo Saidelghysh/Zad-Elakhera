@@ -50,9 +50,35 @@ class NotificationService {
           _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
       // أولًا نتحقق هل الإذن ممنوح أصلًا (بعض الأجهزة تمنحه تلقائيًا).
       final alreadyGranted = await androidPlugin?.areNotificationsEnabled();
-      if (alreadyGranted == true) return true;
+      if (alreadyGranted != true) {
+        final granted = await androidPlugin?.requestNotificationsPermission();
+        if (granted != true) return false;
+      }
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
 
-      final granted = await androidPlugin?.requestNotificationsPermission();
+  /// إذن "التنبيهات الدقيقة" (Exact Alarms) — منفصل تمامًا عن إذن الإشعارات
+  /// العادي، ومطلوب بأندرويد ١٢ فأعلى عشان الإشعار يوصل بالوقت المحدد
+  /// بالضبط بدل ما يتأخر لدقائق (أو ما يوصل أصلًا) بسبب توفير الطاقة.
+  static Future<bool> _hasExactAlarmPermission() async {
+    try {
+      final androidPlugin =
+          _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+      final canSchedule = await androidPlugin?.canScheduleExactNotifications();
+      return canSchedule ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static Future<bool> requestExactAlarmPermission() async {
+    try {
+      final androidPlugin =
+          _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+      final granted = await androidPlugin?.requestExactAlarmsPermission();
       return granted ?? false;
     } catch (_) {
       return false;
@@ -85,15 +111,27 @@ class NotificationService {
       );
     }
 
+    var hasExact = await _hasExactAlarmPermission();
+    if (!hasExact) {
+      await requestExactAlarmPermission();
+      hasExact = await _hasExactAlarmPermission();
+    }
+
     final error = await _scheduleOne(
       id: 9999,
       title: 'اختبار إشعار الأذان',
       body: 'لو سمعت هذا وصوت الأذان، الإعداد شغّال تمام ✅',
       time: DateTime.now().add(const Duration(seconds: 10)),
       adhanVoiceId: adhanVoiceId,
+      useExact: hasExact,
     );
 
-    return ScheduleResult(scheduledCount: error == null ? 1 : 0, permissionGranted: true, lastError: error);
+    final note = hasExact ? null : 'تنبيه: إذن "التنبيهات الدقيقة" غير ممنوح — قد يتأخر الإشعار قليلًا.';
+    return ScheduleResult(
+      scheduledCount: error == null ? 1 : 0,
+      permissionGranted: true,
+      lastError: error ?? note,
+    );
   }
 
   /// يجدول إشعارات اليوم الحالي، ويعيد نتيجة حقيقية (كم إشعار انجدول فعلًا).
@@ -122,6 +160,12 @@ class NotificationService {
       // نكمل الجدولة الجديدة فوقها حتى لو فشل المسح.
     }
 
+    var hasExact = await _hasExactAlarmPermission();
+    if (!hasExact) {
+      await requestExactAlarmPermission();
+      hasExact = await _hasExactAlarmPermission();
+    }
+
     final entries = times.asList().where((e) => e.name != 'الشروق');
     int id = 0;
     int scheduled = 0;
@@ -137,6 +181,7 @@ class NotificationService {
           body: 'زاد الآخرة — صلِّ في وقتها 🕌',
           time: entry.time,
           adhanVoiceId: adhanVoiceId,
+          useExact: hasExact,
         );
         if (err == null) {
           scheduled++;
@@ -153,6 +198,7 @@ class NotificationService {
           body: 'باقي $reminderMinutes دقائق على أذان ${entry.name}',
           time: reminderTime,
           adhanVoiceId: null,
+          useExact: hasExact,
         );
         if (err == null) {
           scheduled++;
@@ -162,7 +208,8 @@ class NotificationService {
       }
     }
 
-    return ScheduleResult(scheduledCount: scheduled, permissionGranted: true, lastError: lastError);
+    final note = hasExact ? null : 'تنبيه: إذن "التنبيهات الدقيقة" غير ممنوح من إعدادات الجهاز — الإشعارات قد تتأخر.';
+    return ScheduleResult(scheduledCount: scheduled, permissionGranted: true, lastError: lastError ?? note);
   }
 
   /// يجدول إشعار واحد، ويعيد null عند النجاح أو رسالة الخطأ عند الفشل.
@@ -172,6 +219,7 @@ class NotificationService {
     required String body,
     required DateTime time,
     required String? adhanVoiceId,
+    required bool useExact,
   }) async {
     try {
       final channelId = adhanVoiceId != null ? 'prayer_azan_channel_$adhanVoiceId' : 'prayer_reminder_channel';
@@ -195,7 +243,7 @@ class NotificationService {
         body,
         tz.TZDateTime.from(time, tz.local),
         details,
-        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        androidScheduleMode: useExact ? AndroidScheduleMode.exactAllowWhileIdle : AndroidScheduleMode.inexactAllowWhileIdle,
         uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
       );
       return null;
