@@ -28,11 +28,20 @@ class NotificationService {
     if (_initialized) return true;
     try {
       tz_data.initializeTimeZones();
-      try {
-        tz.setLocalLocation(tz.getLocation(DateTime.now().timeZoneName));
-      } catch (_) {
-        // لو ما قدر يحدد المنطقة الزمنية بالاسم، يبقى على UTC كخيار آمن.
-      }
+      // لا نعتمد على اسم المنطقة الزمنية للجهاز (زي "Africa/Cairo") لأن
+      // كثير من الأجهزة ترجعه بصيغة مختصرة (زي "EET") ما يتعرف عليها
+      // مصدر بيانات المناطق الزمنية، فيرجع صامتًا لتوقيت غرينتش (UTC)
+      // ويسبب فارق ساعتين-ثلاثة بكل إشعار مجدول بدون أي خطأ ظاهر.
+      // البديل الآمن: نحسب فرق التوقيت الفعلي (UTC Offset) مباشرة من
+      // الجهاز، ونبني عليه منطقة زمنية ثابتة مضمونة الصحة دائمًا.
+      final offset = DateTime.now().timeZoneOffset;
+      final wholeHours = offset.inMinutes / 60;
+      final roundedHours = wholeHours.round();
+      // ملاحظة مهمة: مناطق "Etc/GMT" بمعيار IANA معكوسة الإشارة عمدًا
+      // (Etc/GMT-3 تعني فعليًا UTC+3، وEtc/GMT+3 تعني UTC-3) — هذا معيار
+      // قديم موروث ومو خطأ، فنطبّقه بالعكس هنا قصدًا ليطابق التوقيت الصحيح.
+      final sign = roundedHours < 0 ? '+' : '-';
+      tz.setLocalLocation(tz.getLocation('Etc/GMT$sign${roundedHours.abs()}'));
 
       const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
       const initSettings = InitializationSettings(android: androidInit);

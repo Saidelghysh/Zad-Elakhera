@@ -19,10 +19,44 @@ jobs:
 
       - run: flutter create . --platforms=android --project-name=zad_alakhira --org=com.zadalakhira
 
+      - name: Set up persistent release signing (required for Play Store + normal app updates)
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ZAD_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ZAD_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ZAD_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ZAD_KEY_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "⚠️ لا توجد أسرار توقيع (Secrets) مضافة بعد — البناء هيكمل بمفتاح debug المؤقت (يحتاج حذف التطبيق كل تحديث)."
+          else
+            echo "$KEYSTORE_BASE64" | base64 -d > android/app/zad-alakhira-release.jks
+            cat > android/key.properties << PROPS_EOF
+          storePassword=$KEYSTORE_PASSWORD
+          keyPassword=$KEY_PASSWORD
+          keyAlias=$KEY_ALIAS
+          storeFile=zad-alakhira-release.jks
+          PROPS_EOF
+            echo "✅ ملف التوقيع الدائم جاهز."
+          fi
+
       - name: Opt out of AGP 9 new DSL (official Google workaround, safe and documented)
         run: |
           echo "android.newDsl=false" >> android/gradle.properties
           echo "android.builtInKotlin=false" >> android/gradle.properties
+
+      - name: Wire release signing config into build.gradle.kts
+        run: |
+          # يضيف كود قراءة ملف التوقيع أعلى الملف (قبل أول سطر)
+          sed -i '1i import java.util.Properties\nimport java.io.FileInputStream\n\nval keystorePropertiesFile = rootProject.file("key.properties")\nval keystoreProperties = Properties()\nval hasSigningConfig = keystorePropertiesFile.exists()\nif (hasSigningConfig) {\n    keystoreProperties.load(FileInputStream(keystorePropertiesFile))\n}\n' android/app/build.gradle.kts
+
+          # يضيف تعريف التوقيع (signingConfigs) داخل قسم android { مباشرة
+          sed -i -E '0,/^[[:space:]]*android[[:space:]]*\{/{s/^([[:space:]]*)android[[:space:]]*\{/\1android {\n\1    signingConfigs {\n\1        create("release") {\n\1            if (hasSigningConfig) {\n\1                keyAlias = keystoreProperties["keyAlias"] as String\n\1                keyPassword = keystoreProperties["keyPassword"] as String\n\1                storeFile = file(keystoreProperties["storeFile"] as String)\n\1                storePassword = keystoreProperties["storePassword"] as String\n\1            }\n\1        }\n\1    }/}' android/app/build.gradle.kts
+
+          # يستخدم توقيعنا الدائم بدل توقيع debug المؤقت (لو الأسرار متوفرة)
+          sed -i 's/signingConfig = signingConfigs.getByName("debug")/signingConfig = if (hasSigningConfig) signingConfigs.getByName("release") else signingConfigs.getByName("debug")/' android/app/build.gradle.kts
+
+          echo "----- app/build.gradle.kts result: -----"
+          cat android/app/build.gradle.kts
 
       - name: Add required Android permissions (location, internet, notifications) + browser query
         run: |
@@ -97,8 +131,14 @@ jobs:
           cat android/app/src/main/res/xml/keep.xml
 
       - run: flutter build apk --release
+      - run: flutter build appbundle --release
 
       - uses: actions/upload-artifact@v4
         with:
           name: zad-alakhira-apk
           path: build/app/outputs/flutter-apk/app-release.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: zad-alakhira-aab-for-play-store
+          path: build/app/outputs/bundle/release/app-release.aab
