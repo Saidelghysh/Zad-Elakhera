@@ -9,49 +9,51 @@ class _LibrarySection {
   final String subtitle;
   final IconData icon;
   final String route;
+  final bool featured;
 
   const _LibrarySection({
     required this.title,
     required this.subtitle,
     required this.icon,
     required this.route,
+    this.featured = false,
   });
 }
 
 const List<_LibrarySection> _sections = [
   _LibrarySection(
+    title: 'البث المباشر',
+    subtitle: 'إذاعة القرآن الكريم من القاهرة — استماع مباشر',
+    icon: Icons.podcasts_rounded,
+    route: '/library/live-radio',
+    featured: true,
+  ),
+  _LibrarySection(
     title: 'التلاوات',
-    subtitle: 'قراء معاصرون بأصوات كاملة للمصحف',
+    subtitle: 'تلاوات كاملة لكبار القراء',
     icon: Icons.headphones_rounded,
     route: '/recitations',
   ),
   _LibrarySection(
-    title: 'حفلات وتسجيلات نادرة',
-    subtitle: 'المنشاوي، عبدالباسط، الليثي، البنا وغيرهم',
-    icon: Icons.auto_awesome_rounded,
+    title: 'الحفلات الخارجية',
+    subtitle: 'حفلات وتسجيلات نادرة — تشغيل داخل التطبيق',
+    icon: Icons.library_music_rounded,
     route: '/library/hafla',
   ),
   _LibrarySection(
-    title: 'الابتهالات',
-    subtitle: 'النقشبندي، محمد عمران، نصر الدين طوبار',
+    title: 'الابتهالات والتواشيح',
+    subtitle: 'مختارات خاشعة من كبار المبتهلين',
     icon: Icons.nights_stay_rounded,
     route: '/library/ibtihalat',
   ),
   _LibrarySection(
-    title: 'أمسيات دينية',
-    subtitle: 'من تراث إذاعة القرآن الكريم من القاهرة',
-    icon: Icons.menu_book_rounded,
+    title: 'الأمسيات الدينية',
+    subtitle: 'تسجيلات دينية أرشيفية مرتبة',
+    icon: Icons.auto_awesome_rounded,
     route: '/library/evenings',
-  ),
-  _LibrarySection(
-    title: 'بث مباشر',
-    subtitle: 'إذاعة القرآن الكريم من القاهرة، على مدار الساعة',
-    icon: Icons.podcasts_rounded,
-    route: '/library/live-radio',
   ),
 ];
 
-/// شاشة المكتبة — مدخل موحّد لكل المحتوى الصوتي الإضافي بالتطبيق.
 class LibraryScreen extends StatelessWidget {
   const LibraryScreen({super.key});
 
@@ -61,49 +63,71 @@ class LibraryScreen extends StatelessWidget {
       backgroundColor: AppColors.royalBlack,
       appBar: AppBar(title: Text('المكتبة', style: AppTextStyles.h2)),
       body: SafeArea(
-        child: ListView.separated(
-          padding: const EdgeInsets.all(16),
-          itemCount: _sections.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 12),
-          itemBuilder: (context, i) {
-            final s = _sections[i];
-            return GlassCard(
-              glow: i == 0,
-              child: InkWell(
-                onTap: () => context.push(s.route),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 52,
-                      height: 52,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: AppColors.navyCardAlt,
-                        border: Border.all(color: AppColors.gold.withOpacity(0.6)),
-                        boxShadow: [
-                          BoxShadow(color: AppColors.gold.withOpacity(0.15), blurRadius: 10, spreadRadius: 1),
-                        ],
-                      ),
-                      child: Icon(s.icon, color: AppColors.gold, size: 24),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+          children: [
+            Text('مكتبة زاد الآخرة', style: AppTextStyles.h1.copyWith(color: AppColors.gold, fontSize: 24)),
+            const SizedBox(height: 4),
+            Text('محتوى صوتي مرتب وواضح — اضغط واستمع مباشرة.', style: AppTextStyles.bodySecondary),
+            const SizedBox(height: 16),
+            ..._sections.map(
+              (section) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: GlassCard(
+                  glow: section.featured,
+                  borderColor: section.featured ? AppColors.gold : AppColors.surfaceBorder,
+                  padding: EdgeInsets.zero,
+                  child: InkWell(
+                    onTap: () => context.push(section.route),
+                    borderRadius: BorderRadius.circular(16),
+                    child: Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: Row(
                         children: [
-                          Text(s.title, style: AppTextStyles.h3.copyWith(color: AppColors.textPrimary)),
-                          const SizedBox(height: 3),
-                          Text(s.subtitle, style: AppTextStyles.caption),
+                          Container(
+                            width: 54,
+                            height: 54,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: AppColors.navyCardAlt,
+                              border: Border.all(color: AppColors.gold.withOpacity(0.60)),
+                            ),
+                            child: Icon(section.icon, color: AppColors.gold, size: 25),
+                          ),
+                          const SizedBox(width: 13),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Expanded(child: Text(section.title, style: AppTextStyles.h3)),
+                                    if (section.featured)
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                        decoration: BoxDecoration(
+                                          borderRadius: BorderRadius.circular(20),
+                                          border: Border.all(color: AppColors.gold.withOpacity(0.45)),
+                                        ),
+                                        child: Text('مباشر', style: AppTextStyles.caption.copyWith(color: AppColors.gold, fontSize: 10)),
+                                      ),
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                Text(section.subtitle, style: AppTextStyles.caption),
+                              ],
+                            ),
+                          ),
+                          const Icon(Icons.chevron_left_rounded, color: AppColors.textMuted),
                         ],
                       ),
                     ),
-                    const Icon(Icons.chevron_left_rounded, color: AppColors.textMuted),
-                  ],
+                  ),
                 ),
               ),
-            );
-          },
+            ),
+          ],
         ),
       ),
     );

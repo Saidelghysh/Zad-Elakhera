@@ -1,144 +1,122 @@
-name: Build APK
+name: Build Zad Alakhira Android
 
 on:
   push:
-    branches:
-      - main
-      - master
-  workflow_dispatch: {}
+    branches: [main, master]
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - uses: subosito/flutter-action@v2
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
         with:
           channel: stable
+          cache: true
 
-      - run: flutter create . --platforms=android --project-name=zad_alakhira --org=com.zadalakhira
+      - name: Generate Android project
+        run: flutter create . --platforms=android --project-name=zad_alakhira --org=com.zadalakhira
 
-      - name: Set up persistent release signing (required for Play Store + normal app updates)
+      - name: Get packages
+        run: flutter pub get
+
+      - name: Generate app icon
+        run: dart run flutter_launcher_icons
+
+      - name: Analyze Dart code
+        run: flutter analyze --no-fatal-infos
+
+      - name: Run tests
+        run: flutter test
+
+      - name: Add Android permissions
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('android/app/src/main/AndroidManifest.xml')
+          s = p.read_text()
+          marker = '<manifest xmlns:android="http://schemas.android.com/apk/res/android">'
+          permissions = '''<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+              <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+              <uses-permission android:name="android.permission.INTERNET"/>
+              <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+              <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
+              <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>'''
+          if 'android.permission.INTERNET' not in s:
+              s = s.replace(marker, marker + '\n    ' + permissions)
+          if '<queries>' not in s:
+              queries = '''<queries>
+                  <intent>
+                      <action android:name="android.intent.action.VIEW"/>
+                      <category android:name="android.intent.category.BROWSABLE"/>
+                      <data android:scheme="https"/>
+                  </intent>
+              </queries>'''
+              s = s.replace('</manifest>', queries + '\n</manifest>')
+          p.write_text(s)
+          PY
+
+      - name: Enable notification desugaring
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('android/app/build.gradle.kts')
+          s = p.read_text()
+          if 'isCoreLibraryDesugaringEnabled = true' not in s:
+              s = s.replace('compileOptions {', 'compileOptions {\n        isCoreLibraryDesugaringEnabled = true', 1)
+          if 'coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")' not in s:
+              s += '\n\ndependencies {\n    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")\n}\n'
+          p.write_text(s)
+          PY
+
+      - name: Configure Play signing when secrets are available
+        if: ${{ env.HAS_KEYSTORE == 'true' }}
         env:
+          HAS_KEYSTORE: ${{ secrets.ZAD_KEYSTORE_BASE64 != '' }}
           KEYSTORE_BASE64: ${{ secrets.ZAD_KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.ZAD_KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.ZAD_KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.ZAD_KEY_PASSWORD }}
         run: |
-          if [ -z "$KEYSTORE_BASE64" ]; then
-            echo "⚠️ لا توجد أسرار توقيع (Secrets) مضافة بعد — البناء هيكمل بمفتاح debug المؤقت (يحتاج حذف التطبيق كل تحديث)."
-          else
-            echo "$KEYSTORE_BASE64" | base64 -d > android/app/zad-alakhira-release.jks
-            cat > android/key.properties << PROPS_EOF
+          echo "$KEYSTORE_BASE64" | base64 -d > android/app/zad-alakhira-release.jks
+          cat > android/key.properties <<EOF2
           storePassword=$KEYSTORE_PASSWORD
           keyPassword=$KEY_PASSWORD
           keyAlias=$KEY_ALIAS
           storeFile=zad-alakhira-release.jks
-          PROPS_EOF
-            echo "✅ ملف التوقيع الدائم جاهز."
-          fi
+          EOF2
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('android/app/build.gradle.kts')
+          s=p.read_text()
+          header='''import java.util.Properties\nimport java.io.FileInputStream\n\nval keystorePropertiesFile = rootProject.file("key.properties")\nval keystoreProperties = Properties()\nif (keystorePropertiesFile.exists()) {\n    keystoreProperties.load(FileInputStream(keystorePropertiesFile))\n}\n\n'''
+          if not s.startswith('import java.util.Properties'):
+              s=header+s
+          signing='''    signingConfigs {\n        create("release") {\n            keyAlias = keystoreProperties["keyAlias"] as String\n            keyPassword = keystoreProperties["keyPassword"] as String\n            storeFile = file(keystoreProperties["storeFile"] as String)\n            storePassword = keystoreProperties["storePassword"] as String\n        }\n    }\n'''
+          if 'signingConfigs {' not in s:
+              s=s.replace('android {', 'android {\n'+signing, 1)
+          s=s.replace('signingConfig = signingConfigs.getByName("debug")', 'signingConfig = signingConfigs.getByName("release")')
+          p.write_text(s)
+          PY
 
-      - name: Opt out of AGP 9 new DSL (official Google workaround, safe and documented)
-        run: |
-          echo "android.newDsl=false" >> android/gradle.properties
-          echo "android.builtInKotlin=false" >> android/gradle.properties
+      - name: Build release APK
+        run: flutter build apk --release
 
-      - name: Wire release signing config into build.gradle.kts
-        run: |
-          # يضيف كود قراءة ملف التوقيع أعلى الملف (قبل أول سطر)
-          sed -i '1i import java.util.Properties\nimport java.io.FileInputStream\n\nval keystorePropertiesFile = rootProject.file("key.properties")\nval keystoreProperties = Properties()\nval hasSigningConfig = keystorePropertiesFile.exists()\nif (hasSigningConfig) {\n    keystoreProperties.load(FileInputStream(keystorePropertiesFile))\n}\n' android/app/build.gradle.kts
+      - name: Build Play Store AAB
+        run: flutter build appbundle --release
 
-          # يضيف تعريف التوقيع (signingConfigs) داخل قسم android { مباشرة
-          sed -i -E '0,/^[[:space:]]*android[[:space:]]*\{/{s/^([[:space:]]*)android[[:space:]]*\{/\1android {\n\1    signingConfigs {\n\1        create("release") {\n\1            if (hasSigningConfig) {\n\1                keyAlias = keystoreProperties["keyAlias"] as String\n\1                keyPassword = keystoreProperties["keyPassword"] as String\n\1                storeFile = file(keystoreProperties["storeFile"] as String)\n\1                storePassword = keystoreProperties["storePassword"] as String\n\1            }\n\1        }\n\1    }/}' android/app/build.gradle.kts
-
-          # يستخدم توقيعنا الدائم بدل توقيع debug المؤقت (لو الأسرار متوفرة)
-          sed -i 's/signingConfig = signingConfigs.getByName("debug")/signingConfig = if (hasSigningConfig) signingConfigs.getByName("release") else signingConfigs.getByName("debug")/' android/app/build.gradle.kts
-
-          echo "----- app/build.gradle.kts result: -----"
-          cat android/app/build.gradle.kts
-
-      - name: Add required Android permissions (location, internet, notifications) + browser query
-        run: |
-          sed -i 's#<manifest xmlns:android="http://schemas.android.com/apk/res/android">#<manifest xmlns:android="http://schemas.android.com/apk/res/android">\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>\n    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>\n    <uses-permission android:name="android.permission.INTERNET"/>\n    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>\n    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>\n    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>\n    <queries>\n        <intent>\n            <action android:name="android.intent.action.VIEW"/>\n            <category android:name="android.intent.category.BROWSABLE"/>\n            <data android:scheme="https"/>\n        </intent>\n    </queries>#' android/app/src/main/AndroidManifest.xml
-          echo "----- AndroidManifest.xml result: -----"
-          cat android/app/src/main/AndroidManifest.xml
-
-      - name: Enable core library desugaring (required by flutter_local_notifications)
-        run: |
-          sed -i -E 's/^([[:space:]]*)compileOptions[[:space:]]*\{/\1compileOptions {\n\1    isCoreLibraryDesugaringEnabled = true/' android/app/build.gradle.kts
-          cat >> android/app/build.gradle.kts << 'GRADLE_EOF'
-
-          dependencies {
-              coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
-          }
-          GRADLE_EOF
-          echo "----- app/build.gradle.kts result: -----"
-          cat android/app/build.gradle.kts
-
-      - name: Add ProGuard rules to fix flutter_local_notifications release-mode crash
-        run: |
-          cat > android/app/proguard-rules.pro << 'PROGUARD_EOF'
-          # يمنع R8 من حذف معلومات النوع اللي تحتاجها مكتبة Gson الداخلية
-          # عند تحميل الإشعارات المجدولة، وهذا سبب كراش معروف بمكتبة
-          # flutter_local_notifications في وضع Release تحديدًا.
-          -keep class com.google.gson.reflect.TypeToken
-          -keep class * extends com.google.gson.reflect.TypeToken
-          -keep public class * implements java.lang.reflect.Type
-          -keep class com.dexterous.** { *; }
-          -dontwarn com.google.gson.**
-          PROGUARD_EOF
-
-          if ! grep -q "proguardFiles" android/app/build.gradle.kts; then
-            sed -i -E '/^[[:space:]]*release[[:space:]]*\{/a\            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")' android/app/build.gradle.kts
-          fi
-          echo "----- app/build.gradle.kts (release block) result: -----"
-          cat android/app/build.gradle.kts
-
-      - run: flutter pub get
-
-      - name: Download real azan audio files as Android notification sounds
-        run: |
-          set -e
-          mkdir -p android/app/src/main/res/raw
-          curl -f -L -o android/app/src/main/res/raw/azan_a9.mp3 "https://cdn.aladhan.com/audio/adhans/a9.mp3"
-          curl -f -L -o android/app/src/main/res/raw/azan_a4.mp3 "https://cdn.aladhan.com/audio/adhans/a4.mp3"
-          curl -f -L -o android/app/src/main/res/raw/azan_a11.mp3 "https://cdn.aladhan.com/audio/adhans/a11-mansour-al-zahrani.mp3"
-          curl -f -L -o android/app/src/main/res/raw/azan_a1.mp3 "https://cdn.aladhan.com/audio/adhans/a1.mp3"
-          curl -f -L -o android/app/src/main/res/raw/azan_a2.mp3 "https://cdn.aladhan.com/audio/adhans/a2.mp3"
-          echo "----- Downloaded azan files: -----"
-          ls -la android/app/src/main/res/raw/
-          echo "----- Verifying file sizes (must be real audio, not error pages) -----"
-          for f in android/app/src/main/res/raw/azan_*.mp3; do
-            size=$(stat -c%s "$f")
-            echo "$f -> $size bytes"
-            if [ "$size" -lt 100000 ]; then
-              echo "❌ ERROR: $f is suspiciously small ($size bytes) - download likely failed or returned an error page instead of real audio."
-              exit 1
-            fi
-          done
-          echo "✅ All azan audio files downloaded successfully with valid sizes."
-
-      - name: Protect azan audio files from Android's resource shrinker
-        run: |
-          mkdir -p android/app/src/main/res/xml
-          cat > android/app/src/main/res/xml/keep.xml << 'KEEP_EOF'
-          <?xml version="1.0" encoding="utf-8"?>
-          <resources xmlns:tools="http://schemas.android.com/tools"
-              tools:keep="@raw/azan_a9,@raw/azan_a4,@raw/azan_a11,@raw/azan_a1,@raw/azan_a2" />
-          KEEP_EOF
-          echo "----- res/xml/keep.xml result: -----"
-          cat android/app/src/main/res/xml/keep.xml
-
-      - run: flutter build apk --release
-      - run: flutter build appbundle --release
-
-      - uses: actions/upload-artifact@v4
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
         with:
-          name: zad-alakhira-apk
+          name: zad-alakhira-release-apk
           path: build/app/outputs/flutter-apk/app-release.apk
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload AAB artifact
+        uses: actions/upload-artifact@v4
         with:
-          name: zad-alakhira-aab-for-play-store
+          name: zad-alakhira-play-store-aab
           path: build/app/outputs/bundle/release/app-release.aab

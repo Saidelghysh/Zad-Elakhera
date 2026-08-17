@@ -12,6 +12,7 @@ import '../settings/settings_service.dart';
 import 'widgets/prayer_hero_card.dart';
 import 'widgets/menu_grid.dart';
 import 'widgets/dua_banner.dart';
+import 'widgets/live_radio_banner.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -123,6 +124,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(2, 3, 2, 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'السلام عليكم',
+                      style: AppTextStyles.h1.copyWith(color: AppColors.gold, fontSize: 25),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      'نسأل الله أن يتقبل منا ومنكم صالح الأعمال',
+                      style: AppTextStyles.caption,
+                    ),
+                  ],
+                ),
+              ),
               asyncPrayerState.when(
                 loading: () => const PrayerHeroCard(
                   nextPrayerName: '...',
@@ -148,9 +166,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   return PrayerHeroCard(nextPrayerName: name, timeRemaining: remaining);
                 },
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 12),
+              const LiveRadioBanner(),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  Expanded(child: Divider(color: AppColors.surfaceBorder)),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    child: Text('خدمات زاد الآخرة', style: AppTextStyles.h3.copyWith(color: AppColors.gold)),
+                  ),
+                  Expanded(child: Divider(color: AppColors.surfaceBorder)),
+                ],
+              ),
+              const SizedBox(height: 12),
               HomeMenuGrid(onTap: (route) => context.push(route)),
-              const SizedBox(height: 16),
+              const SizedBox(height: 14),
+              const _SadaqaCard(),
+              const SizedBox(height: 12),
               DuaBanner(onTap: () => context.push('/dua-walidi')),
             ],
           ),
@@ -162,21 +195,58 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           setState(() => _navIndex = i);
           if (i == 1) {
             context.push('/library');
+          } else if (i == 2) {
+            context.push('/dua-walidi');
+          } else if (i == 3) {
+            context.push('/quran');
           } else if (i == 4) {
             context.push('/settings');
-          } else if (i == 2 || i == 3) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('هذي الميزة قريبًا بإذن الله')),
-            );
           }
         },
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: 'الرئيسية'),
-          BottomNavigationBarItem(icon: Icon(Icons.grid_view_rounded), label: 'المكتبة'),
-          BottomNavigationBarItem(icon: Icon(Icons.favorite_border_rounded), label: 'المفضلة'),
-          BottomNavigationBarItem(icon: Icon(Icons.search_rounded), label: 'بحث'),
-          BottomNavigationBarItem(icon: Icon(Icons.settings_outlined), label: 'الإعدادات'),
+          BottomNavigationBarItem(icon: Icon(Icons.library_music_rounded), label: 'المكتبة'),
+          BottomNavigationBarItem(icon: Icon(Icons.favorite_border_rounded), label: 'دعاء'),
+          BottomNavigationBarItem(icon: Icon(Icons.menu_book_rounded), label: 'القرآن'),
+          BottomNavigationBarItem(icon: Icon(Icons.person_outline_rounded), label: 'حسابي'),
         ],
+      ),
+    );
+  }
+}
+
+class _SadaqaCard extends StatelessWidget {
+  const _SadaqaCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: () => context.push('/dua-walidi'),
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          gradient: AppColors.heroGradient,
+          border: Border.all(color: AppColors.gold.withOpacity(0.65)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.volunteer_activism_rounded, color: AppColors.gold, size: 30),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('صدقة جارية على روح والدي', style: AppTextStyles.h3.copyWith(color: AppColors.gold)),
+                  const SizedBox(height: 3),
+                  Text('الحاج عبدالحميد إبراهيم الغايش رحمه الله', style: AppTextStyles.caption),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_left_rounded, color: AppColors.gold),
+          ],
+        ),
       ),
     );
   }
