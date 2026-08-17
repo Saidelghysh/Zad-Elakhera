@@ -39,12 +39,12 @@ class PrayerTimesCalculationService {
     );
 
     return DailyPrayerTimes(
-      fajr: (prayerTimes.fajr ?? DateTime.now()).toLocal(),
-      sunrise: (prayerTimes.sunrise ?? DateTime.now()).toLocal(),
-      dhuhr: (prayerTimes.dhuhr ?? DateTime.now()).toLocal(),
-      asr: (prayerTimes.asr ?? DateTime.now()).toLocal(),
-      maghrib: (prayerTimes.maghrib ?? DateTime.now()).toLocal(),
-      isha: (prayerTimes.isha ?? DateTime.now()).toLocal(),
+      fajr: prayerTimes.fajr.toLocal(),
+      sunrise: prayerTimes.sunrise.toLocal(),
+      dhuhr: prayerTimes.dhuhr.toLocal(),
+      asr: prayerTimes.asr.toLocal(),
+      maghrib: prayerTimes.maghrib.toLocal(),
+      isha: prayerTimes.isha.toLocal(),
     );
   }
 
