@@ -130,7 +130,7 @@ class _QuranScreenState extends State<QuranScreen> {
                         if (i == 0) {
                           return InkWell(
                             borderRadius: BorderRadius.circular(16),
-                            onTap: () => context.push('/quran/${lastReadSurah!.number}', extra: lastReadSurah),
+                            onTap: () => context.push('/quran/${lastReadSurah.number}', extra: lastReadSurah),
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                               decoration: BoxDecoration(
@@ -149,7 +149,7 @@ class _QuranScreenState extends State<QuranScreen> {
                                         Text('متابعة القراءة', style: AppTextStyles.h3),
                                         const SizedBox(height: 2),
                                         Text(
-                                          '${lastReadSurah!.name} — آية ${lastRead!.$2}',
+                                          '${lastReadSurah.name} — آية ${lastRead.$2}',
                                           style: AppTextStyles.caption,
                                         ),
                                       ],

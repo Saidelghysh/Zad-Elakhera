@@ -60,7 +60,9 @@ class _TasbeehScreenState extends State<TasbeehScreen> {
               selected: _target == t,
               onSelected: (_) async {
                 await TasbeehService.setTarget(t);
+                if (!mounted) return;
                 setState(() => _target = t);
+                if (!ctx.mounted) return;
                 Navigator.pop(ctx);
               },
               backgroundColor: AppColors.navyCardAlt,
